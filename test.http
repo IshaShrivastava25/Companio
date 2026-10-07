@@ -1,0 +1,15 @@
+### Create a user
+POST http://localhost:8080/api/users
+Content-Type: application/json
+
+{
+    "name": "Isha Test",
+    "email": "isha@test2.com",
+    "password": "test12345",
+    "phoneNumber": "9876543211"
+}
+
+###
+
+### Get all users
+GET http://localhost:8080/api/users
