@@ -3,6 +3,7 @@ package com.companio.controller;
 import com.companio.dto.SosEventResponse;
 import com.companio.model.SosEvent;
 import com.companio.service.SosEventService;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -25,22 +26,41 @@ public class SosEventController {
             @RequestBody Map<String, Double> body) {
 
         String userEmail = authentication.getName();
+
         SosEvent event = sosEventService.triggerSos(
                 userEmail,
                 body.get("latitude"),
                 body.get("longitude")
         );
+
         return ResponseEntity.ok(new SosEventResponse(event));
     }
 
     @GetMapping
-    public ResponseEntity<List<SosEventResponse>> getMyEvents(Authentication authentication) {
+    public ResponseEntity<List<SosEventResponse>> getMyEvents(
+            Authentication authentication) {
+
         String userEmail = authentication.getName();
-        List<SosEventResponse> responses = sosEventService.getMyEvents(userEmail)
-                .stream()
-                .map(SosEventResponse::new)
-                .collect(Collectors.toList());
+
+        List<SosEventResponse> responses =
+                sosEventService.getMyEvents(userEmail)
+                        .stream()
+                        .map(SosEventResponse::new)
+                        .collect(Collectors.toList());
+
         return ResponseEntity.ok(responses);
+    }
+
+    @PutMapping("/{id}/cancel")
+    public ResponseEntity<SosEventResponse> cancelSos(
+            Authentication authentication,
+            @PathVariable Long id) {
+
+        String userEmail = authentication.getName();
+
+        SosEvent event = sosEventService.cancelSos(userEmail, id);
+
+        return ResponseEntity.ok(new SosEventResponse(event));
     }
 
     @PutMapping("/{id}/resolve")
@@ -49,7 +69,9 @@ public class SosEventController {
             @PathVariable Long id) {
 
         String userEmail = authentication.getName();
+
         SosEvent event = sosEventService.resolveSos(userEmail, id);
+
         return ResponseEntity.ok(new SosEventResponse(event));
     }
 }

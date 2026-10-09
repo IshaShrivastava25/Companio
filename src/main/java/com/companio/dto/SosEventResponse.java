@@ -10,6 +10,8 @@ public class SosEventResponse {
     private Double longitude;
     private String status;
     private LocalDateTime triggeredAt;
+    private LocalDateTime alertAt;
+    private LocalDateTime cancelledAt;
     private LocalDateTime resolvedAt;
 
     public SosEventResponse(SosEvent event) {
@@ -18,13 +20,40 @@ public class SosEventResponse {
         this.longitude = event.getLongitude();
         this.status = event.getStatus().name();
         this.triggeredAt = event.getTriggeredAt();
+        this.alertAt = event.getAlertAt();
+        this.cancelledAt = event.getCancelledAt();
         this.resolvedAt = event.getResolvedAt();
     }
 
-    public Long getId() { return id; }
-    public Double getLatitude() { return latitude; }
-    public Double getLongitude() { return longitude; }
-    public String getStatus() { return status; }
-    public LocalDateTime getTriggeredAt() { return triggeredAt; }
-    public LocalDateTime getResolvedAt() { return resolvedAt; }
+    public Long getId() {
+        return id;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public LocalDateTime getTriggeredAt() {
+        return triggeredAt;
+    }
+
+    public LocalDateTime getAlertAt() {
+        return alertAt;
+    }
+
+    public LocalDateTime getCancelledAt() {
+        return cancelledAt;
+    }
+
+    public LocalDateTime getResolvedAt() {
+        return resolvedAt;
+    }
 }

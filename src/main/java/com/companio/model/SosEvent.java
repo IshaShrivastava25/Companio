@@ -26,6 +26,10 @@ public class SosEvent {
     @CreationTimestamp
     private LocalDateTime triggeredAt;
 
+    private LocalDateTime alertAt;
+
+    private LocalDateTime cancelledAt;
+
     private LocalDateTime resolvedAt;
 
     public SosEvent() {
@@ -35,16 +39,60 @@ public class SosEvent {
         this.user = user;
         this.latitude = latitude;
         this.longitude = longitude;
-        this.status = SosStatus.ACTIVE;
+        this.status = SosStatus.PENDING;
+        this.triggeredAt = LocalDateTime.now();
+        this.alertAt = LocalDateTime.now().plusSeconds(15);
     }
 
-    public Long getId() { return id; }
-    public User getUser() { return user; }
-    public Double getLatitude() { return latitude; }
-    public Double getLongitude() { return longitude; }
-    public SosStatus getStatus() { return status; }
-    public void setStatus(SosStatus status) { this.status = status; }
-    public LocalDateTime getTriggeredAt() { return triggeredAt; }
-    public LocalDateTime getResolvedAt() { return resolvedAt; }
-    public void setResolvedAt(LocalDateTime resolvedAt) { this.resolvedAt = resolvedAt; }
+    public Long getId() {
+        return id;
+    }
+
+    public User getUser() {
+        return user;
+    }
+
+    public Double getLatitude() {
+        return latitude;
+    }
+
+    public Double getLongitude() {
+        return longitude;
+    }
+
+    public SosStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(SosStatus status) {
+        this.status = status;
+    }
+
+    public LocalDateTime getTriggeredAt() {
+        return triggeredAt;
+    }
+
+    public LocalDateTime getAlertAt() {
+        return alertAt;
+    }
+
+    public void setAlertAt(LocalDateTime alertAt) {
+        this.alertAt = alertAt;
+    }
+
+    public LocalDateTime getCancelledAt() {
+        return cancelledAt;
+    }
+
+    public void setCancelledAt(LocalDateTime cancelledAt) {
+        this.cancelledAt = cancelledAt;
+    }
+
+    public LocalDateTime getResolvedAt() {
+        return resolvedAt;
+    }
+
+    public void setResolvedAt(LocalDateTime resolvedAt) {
+        this.resolvedAt = resolvedAt;
+    }
 }
