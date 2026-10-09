@@ -24,27 +24,53 @@ public class GuardianTimerService {
     @Autowired
     private SosEventService sosEventService;
 
+    private static final long GRACE_MINUTES = 5;
+
     public GuardianTimer startTimer(String userEmail, int durationMinutes) {
+
+        if (durationMinutes <= 0) {
+            throw new IllegalArgumentException(
+                    "Timer duration must be greater than zero"
+            );
+        }
+
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         GuardianTimer timer = new GuardianTimer(user, durationMinutes);
-        return guardianTimerRepository.save(timer);
+
+        GuardianTimer savedTimer = guardianTimerRepository.save(timer);
+
+        System.out.println(
+                "Guardian Timer started. ID: " + savedTimer.getId()
+                        + ", expires at: " + savedTimer.getExpiresAt()
+        );
+
+        return savedTimer;
     }
 
     public GuardianTimer checkIn(String userEmail) {
+
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
         GuardianTimer timer = guardianTimerRepository
-                .findTopByUser_IdAndStatusOrderByStartedAtDesc(user.getId(), GuardianTimerStatus.ACTIVE)
+                .findTopByUser_IdAndStatusOrderByStartedAtDesc(
+                        user.getId(),
+                        GuardianTimerStatus.ACTIVE
+                )
                 .orElseThrow(() -> new RuntimeException("No active timer found"));
 
         timer.setStatus(GuardianTimerStatus.CHECKED_IN);
-        return guardianTimerRepository.save(timer);
-    }
 
-    private static final long GRACE_MINUTES = 5;
+        GuardianTimer savedTimer = guardianTimerRepository.save(timer);
+
+        System.out.println(
+                "Guardian Timer checked in. ID: " + savedTimer.getId()
+        );
+
+        return savedTimer;
+    }
 
     @Scheduled(fixedRate = 60000)
     public void checkExpiredTimers() {
@@ -54,17 +80,24 @@ public class GuardianTimerService {
 
         for (GuardianTimer timer : expiredTimers) {
             String email = timer.getUser().getEmail();
-            timer.setStatus(GuardianTimerStatus.EXPIRED);
-            guardianTimerRepository.save(timer);
+            try {
+                if (timer.getExpiresAt().isBefore(now.minusMinutes(GRACE_MINUTES))) {
+                    timer.setStatus(GuardianTimerStatus.EXPIRED);
+                    guardianTimerRepository.save(timer);
+                    System.out.println("Timer " + timer.getId() + " expired over " + GRACE_MINUTES
+                            + " minutes ago - SOS NOT auto-triggered.");
+                    continue;
+                }
 
-            if (timer.getExpiresAt().isBefore(now.minusMinutes(GRACE_MINUTES))) {
-                System.out.println("Guardian Timer for " + email + " expired more than "
-                        + GRACE_MINUTES + " minutes ago (server likely down) - SOS NOT auto-triggered.");
-                continue;
+                sosEventService.triggerSos(email, null, null);   // fire the SOS first
+                timer.setStatus(GuardianTimerStatus.EXPIRED);    // only then mark it done
+                guardianTimerRepository.save(timer);
+                System.out.println("Guardian Timer expired for user: " + email + " - SOS auto-triggered.");
+            } catch (Exception e) {
+                System.err.println("Failed to process timer " + timer.getId() + ": " + e.getMessage()
+                        + " - will retry next cycle");
             }
-
-            sosEventService.triggerSos(email, null, null);
-            System.out.println("Guardian Timer expired for user: " + email + " - SOS auto-triggered.");
         }
     }
 }
+
