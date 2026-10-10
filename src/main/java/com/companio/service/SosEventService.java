@@ -38,6 +38,14 @@ public class SosEventService {
 
         return sosEventRepository.save(event);
     }
+    public SosEvent triggerSosImmediately(String userEmail, Double latitude, Double longitude) {
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        SosEvent event = sosEventRepository.save(SosEvent.activeNow(user, latitude, longitude));
+        System.out.println("SOS " + event.getId() + " is ACTIVE immediately (no confirmation window).");
+        return event;
+    }
 
     // Return the authenticated user's SOS events.
     public List<SosEvent> getMyEvents(String userEmail) {

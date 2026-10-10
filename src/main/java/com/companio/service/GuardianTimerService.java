@@ -89,7 +89,7 @@ public class GuardianTimerService {
                     continue;
                 }
 
-                sosEventService.triggerSos(email, null, null);   // fire the SOS first
+                sosEventService.triggerSosImmediately(email, null, null);   // fire the SOS first
                 timer.setStatus(GuardianTimerStatus.EXPIRED);    // only then mark it done
                 guardianTimerRepository.save(timer);
                 System.out.println("Guardian Timer expired for user: " + email + " - SOS auto-triggered.");

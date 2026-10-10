@@ -32,6 +32,16 @@ public class SosEvent {
 
     private LocalDateTime resolvedAt;
 
+    public static SosEvent activeNow(User user, Double latitude, Double longitude) {
+        SosEvent event = new SosEvent();
+        event.user = user;
+        event.latitude = latitude;
+        event.longitude = longitude;
+        event.status = SosStatus.ACTIVE;
+        event.alertAt = LocalDateTime.now();
+        return event;
+    }
+
     public SosEvent() {
     }
 
