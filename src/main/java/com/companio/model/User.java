@@ -24,6 +24,12 @@ public class User {
     @Column(nullable = false)
     private String password;
 
+    @Column(name = "pin_hash")
+    private String pinHash;
+
+    @Column(name = "duress_pin_hash")
+    private String duressPinHash;
+
     private String phoneNumber;
 
     public User() {
@@ -70,5 +76,21 @@ public class User {
 
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
+    }
+
+    public String getPinHash() {
+        return pinHash;
+    }
+
+    public void setPinHash(String pinHash) {
+        this.pinHash = pinHash;
+    }
+
+    public String getDuressPinHash() {
+        return duressPinHash;
+    }
+
+    public void setDuressPinHash(String duressPinHash) {
+        this.duressPinHash = duressPinHash;
     }
 }

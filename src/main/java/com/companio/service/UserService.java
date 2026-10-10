@@ -25,4 +25,25 @@ public class UserService {
     public List<User> getAllUsers() {
         return userRepository.findAll();
     }
+
+    public void setPins(String email, String pin, String duressPin) {
+        if (pin == null || !pin.matches("\\d{4,6}")
+                || duressPin == null || !duressPin.matches("\\d{4,6}")) {
+            throw new IllegalArgumentException("PINs must be 4 to 6 digits");
+        }
+
+        if (pin.equals(duressPin)) {
+            throw new IllegalArgumentException(
+                    "Duress PIN must differ from the real PIN"
+            );
+        }
+
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        user.setPinHash(passwordEncoder.encode(pin));
+        user.setDuressPinHash(passwordEncoder.encode(duressPin));
+
+        userRepository.save(user);
+    }
 }

@@ -20,6 +20,7 @@ public class SosEventController {
     @Autowired
     private SosEventService sosEventService;
 
+    // Trigger a new SOS with a 15-second confirmation window.
     @PostMapping("/trigger")
     public ResponseEntity<SosEventResponse> triggerSos(
             Authentication authentication,
@@ -36,6 +37,7 @@ public class SosEventController {
         return ResponseEntity.ok(new SosEventResponse(event));
     }
 
+    // Retrieve the authenticated user's SOS events.
     @GetMapping
     public ResponseEntity<List<SosEventResponse>> getMyEvents(
             Authentication authentication) {
@@ -51,18 +53,26 @@ public class SosEventController {
         return ResponseEntity.ok(responses);
     }
 
+    // Cancel a pending SOS using the real PIN or duress PIN.
     @PutMapping("/{id}/cancel")
     public ResponseEntity<SosEventResponse> cancelSos(
             Authentication authentication,
-            @PathVariable Long id) {
+            @PathVariable Long id,
+            @RequestBody Map<String, String> body) {
 
         String userEmail = authentication.getName();
+        String pin = body.get("pin");
 
-        SosEvent event = sosEventService.cancelSos(userEmail, id);
+        SosEvent event = sosEventService.cancelSos(
+                userEmail,
+                id,
+                pin
+        );
 
         return ResponseEntity.ok(new SosEventResponse(event));
     }
 
+    // Resolve an active SOS event.
     @PutMapping("/{id}/resolve")
     public ResponseEntity<SosEventResponse> resolveSos(
             Authentication authentication,
@@ -70,7 +80,10 @@ public class SosEventController {
 
         String userEmail = authentication.getName();
 
-        SosEvent event = sosEventService.resolveSos(userEmail, id);
+        SosEvent event = sosEventService.resolveSos(
+                userEmail,
+                id
+        );
 
         return ResponseEntity.ok(new SosEventResponse(event));
     }
