@@ -1,15 +1,16 @@
 package com.companio.controller;
 
+import com.companio.dto.ContactRequest;
 import com.companio.dto.TrustedContactResponse;
 import com.companio.model.TrustedContact;
 import com.companio.service.TrustedContactService;
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 @RestController
@@ -22,25 +23,49 @@ public class TrustedContactController {
     @PostMapping
     public ResponseEntity<TrustedContactResponse> addContact(
             Authentication authentication,
-            @RequestBody Map<String, String> body) {
+            @Valid @RequestBody ContactRequest body) {
 
-        String userEmail = authentication.getName();
         TrustedContact contact = trustedContactService.addContact(
-                userEmail,
-                body.get("name"),
-                body.get("phoneNumber"),
-                body.get("relationship")
+                authentication.getName(),
+                body.name(),
+                body.phoneNumber(),
+                body.relationship()
         );
         return ResponseEntity.ok(new TrustedContactResponse(contact));
     }
 
     @GetMapping
     public ResponseEntity<List<TrustedContactResponse>> getMyContacts(Authentication authentication) {
-        String userEmail = authentication.getName();
-        List<TrustedContactResponse> responses = trustedContactService.getContactsForUser(userEmail)
+        List<TrustedContactResponse> responses = trustedContactService
+                .getContactsForUser(authentication.getName())
                 .stream()
                 .map(TrustedContactResponse::new)
                 .collect(Collectors.toList());
         return ResponseEntity.ok(responses);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<TrustedContactResponse> updateContact(
+            Authentication authentication,
+            @PathVariable Long id,
+            @Valid @RequestBody ContactRequest body) {
+
+        TrustedContact contact = trustedContactService.updateContact(
+                authentication.getName(),
+                id,
+                body.name(),
+                body.phoneNumber(),
+                body.relationship()
+        );
+        return ResponseEntity.ok(new TrustedContactResponse(contact));
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteContact(
+            Authentication authentication,
+            @PathVariable Long id) {
+
+        trustedContactService.deleteContact(authentication.getName(), id);
+        return ResponseEntity.noContent().build();
     }
 }

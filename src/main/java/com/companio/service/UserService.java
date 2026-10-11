@@ -1,12 +1,11 @@
 package com.companio.service;
 
+import com.companio.exception.ResourceNotFoundException;
 import com.companio.model.User;
 import com.companio.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 public class UserService {
@@ -18,12 +17,16 @@ public class UserService {
     private PasswordEncoder passwordEncoder;
 
     public User createUser(User user) {
+        if (userRepository.findByEmail(user.getEmail()).isPresent()) {
+            throw new IllegalStateException("That email is already registered");
+        }
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         return userRepository.save(user);
     }
 
-    public List<User> getAllUsers() {
-        return userRepository.findAll();
+    public User getByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 
     public void setPins(String email, String pin, String duressPin) {
@@ -33,17 +36,12 @@ public class UserService {
         }
 
         if (pin.equals(duressPin)) {
-            throw new IllegalArgumentException(
-                    "Duress PIN must differ from the real PIN"
-            );
+            throw new IllegalArgumentException("Duress PIN must differ from the real PIN");
         }
 
-        User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
-
+        User user = getByEmail(email);
         user.setPinHash(passwordEncoder.encode(pin));
         user.setDuressPinHash(passwordEncoder.encode(duressPin));
-
         userRepository.save(user);
     }
 }

@@ -1,17 +1,16 @@
 package com.companio.controller;
 
+import com.companio.dto.RegisterRequest;
 import com.companio.dto.UserResponse;
 import com.companio.model.User;
 import com.companio.service.UserService;
-
+import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/users")
@@ -21,23 +20,14 @@ public class UserController {
     private UserService userService;
 
     @PostMapping
-    public ResponseEntity<UserResponse> createUser(
-            @RequestBody User user) {
-
-        User savedUser = userService.createUser(user);
-
-        return ResponseEntity.ok(new UserResponse(savedUser));
+    public ResponseEntity<UserResponse> createUser(@Valid @RequestBody RegisterRequest req) {
+        User user = new User(req.name(), req.email(), req.password(), req.phoneNumber());
+        return ResponseEntity.ok(new UserResponse(userService.createUser(user)));
     }
 
-    @GetMapping
-    public ResponseEntity<List<UserResponse>> getAllUsers() {
-
-        List<UserResponse> responses = userService.getAllUsers()
-                .stream()
-                .map(UserResponse::new)
-                .collect(Collectors.toList());
-
-        return ResponseEntity.ok(responses);
+    @GetMapping("/me")
+    public ResponseEntity<UserResponse> getMe(Authentication authentication) {
+        return ResponseEntity.ok(new UserResponse(userService.getByEmail(authentication.getName())));
     }
 
     @PutMapping("/me/pins")
