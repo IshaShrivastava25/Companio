@@ -5,6 +5,7 @@ import com.companio.model.SosStatus;
 import com.companio.model.User;
 import com.companio.repository.SosEventRepository;
 import com.companio.repository.UserRepository;
+import com.companio.exception.ResourceNotFoundException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -46,17 +47,9 @@ public class SosEventService {
 
     // Find an SOS event and verify that it belongs to the authenticated user.
     private SosEvent findOwnedEvent(String userEmail, Long eventId) {
-        SosEvent event = sosEventRepository.findById(eventId)
-                .orElseThrow(() ->
-                        new RuntimeException("SOS event not found"));
-
-        if (!event.getUser().getEmail().equals(userEmail)) {
-            throw new RuntimeException(
-                    "Not authorized to access this SOS event"
-            );
-        }
-
-        return event;
+        return sosEventRepository.findById(eventId)
+                .filter(event -> event.getUser().getEmail().equals(userEmail))
+                .orElseThrow(() -> new ResourceNotFoundException("SOS event not found"));
     }
 
     // Trigger a new SOS with a 15-second cancellation window.
@@ -66,8 +59,7 @@ public class SosEventService {
             Double longitude) {
 
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         SosEvent event = new SosEvent(user, latitude, longitude);
 
@@ -81,8 +73,7 @@ public class SosEventService {
             Double longitude) {
 
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         SosEvent event = sosEventRepository.save(
                 SosEvent.activeNow(user, latitude, longitude)
@@ -101,8 +92,7 @@ public class SosEventService {
     // Return the authenticated user's SOS events.
     public List<SosEvent> getMyEvents(String userEmail) {
         User user = userRepository.findByEmail(userEmail)
-                .orElseThrow(() ->
-                        new RuntimeException("User not found"));
+                .orElseThrow(() -> new RuntimeException("User not found"));
 
         return sosEventRepository.findByUser_Id(user.getId());
     }

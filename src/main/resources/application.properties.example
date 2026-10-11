@@ -3,3 +3,5 @@ spring.datasource.username=postgres
 spring.datasource.password=YOUR_PASSWORD_HERE
 spring.jpa.hibernate.ddl-auto=update
 jwt.secret=YOUR_JWT_SECRET_HERE
+server.error.include-stacktrace=never
+server.error.include-message=never
