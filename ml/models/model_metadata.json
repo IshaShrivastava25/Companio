@@ -1,0 +1,68 @@
+{
+    "model_name": "Companio Scream Detection",
+    "feature_extractor": "YAMNet",
+    "embedding_configuration": {
+        "method": "mean pooling",
+        "embedding_dimensions": 1024
+    },
+    "classifier": "Logistic Regression",
+    "operating_thresholds": {
+        "low": {
+            "condition": "probability < 0.30"
+        },
+        "medium": {
+            "condition": "0.30 <= probability < 0.90",
+            "threshold": 0.3,
+            "selection_rule": "Highest evaluated validation threshold with recall >= 0.85",
+            "validation_precision": 0.75,
+            "validation_recall": 0.8538,
+            "validation_false_positives": 37,
+            "validation_missed_screams": 19
+        },
+        "high": {
+            "condition": "probability >= 0.90",
+            "threshold": 0.9,
+            "selection_rule": "Lowest evaluated validation threshold with precision >= 0.90",
+            "validation_precision": 0.91,
+            "validation_recall": 0.7
+        }
+    },
+    "exploratory_test_evaluation": {
+        "threshold": 0.2,
+        "test_accuracy": 0.8855,
+        "test_precision": 0.6994,
+        "test_recall": 0.938,
+        "test_f1_score": 0.8013,
+        "test_roc_auc": 0.9693,
+        "test_samples": 524,
+        "test_true_positives": 121,
+        "test_true_negatives": 343,
+        "test_false_positives": 52,
+        "test_false_negatives": 8,
+        "confidence_intervals_95": {
+            "precision": [
+                0.6274,
+                0.7628
+            ],
+            "recall": [
+                0.8824,
+                0.9682
+            ],
+            "false_positive_rate": [
+                0.1018,
+                0.1686
+            ]
+        },
+        "false_positive_rate": 0.1316,
+        "test_set_inspected_during_development": true
+    },
+    "evaluation_limitations": [
+        "Test results were inspected during development.",
+        "Test metrics at threshold 0.20 do not represent performance at threshold 0.30 or 0.90.",
+        "Potential overlap between YAMNet pretraining data and the evaluation dataset has not been verified.",
+        "Real-world false-alarm rates have not been measured.",
+        "Confidence intervals assume reasonably independent evaluation observations."
+    ],
+    "deployment_status": "Research prototype; not validated for emergency use",
+    "automatic_sos_approved": false
+}
