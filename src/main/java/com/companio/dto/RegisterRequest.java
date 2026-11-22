@@ -5,6 +5,9 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 
+/**
+ * Request payload used when creating a new user account.
+ */
 public record RegisterRequest(
         @NotBlank(message = "Name is required") @Size(max = 100, message = "Name is too long") String name,
         @NotBlank(message = "Email is required") @Email(message = "Enter a valid email address") String email,

@@ -9,6 +9,10 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+/**
+ * Stores and validates trusted-contact data for a user.
+ */
+
 
 @Service
 public class TrustedContactService {

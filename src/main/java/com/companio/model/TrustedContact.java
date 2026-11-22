@@ -1,6 +1,10 @@
 package com.companio.model;
 
 import jakarta.persistence.*;
+/**
+ * Represents a trusted contact linked to a user account.
+ */
+
 
 @Entity
 @Table(name = "trusted_contacts")

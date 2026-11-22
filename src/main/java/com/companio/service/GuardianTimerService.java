@@ -11,6 +11,10 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+/**
+ * Applies guardian-timer business rules and expiry checks.
+ */
+
 
 @Service
 public class GuardianTimerService {

@@ -1,8 +1,13 @@
 package com.companio.controller;
 
+import com.companio.dto.LocationRequest;
 import com.companio.dto.SosEventResponse;
+import com.companio.dto.TrackingPoint;
+import com.companio.model.LocationUpdate;
 import com.companio.model.SosEvent;
 import com.companio.service.SosEventService;
+
+import jakarta.validation.Valid;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +18,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
+/**
+ * Exposes SOS lifecycle and location update endpoints.
+ */
 @RestController
 @RequestMapping("/api/sos")
 public class SosEventController {
@@ -26,30 +34,21 @@ public class SosEventController {
             Authentication authentication,
             @RequestBody Map<String, Double> body) {
 
-        String userEmail = authentication.getName();
-
         SosEvent event = sosEventService.triggerSos(
-                userEmail,
+                authentication.getName(),
                 body.get("latitude"),
                 body.get("longitude")
         );
-
         return ResponseEntity.ok(new SosEventResponse(event));
     }
 
     // Retrieve the authenticated user's SOS events.
     @GetMapping
-    public ResponseEntity<List<SosEventResponse>> getMyEvents(
-            Authentication authentication) {
-
-        String userEmail = authentication.getName();
-
-        List<SosEventResponse> responses =
-                sosEventService.getMyEvents(userEmail)
-                        .stream()
-                        .map(SosEventResponse::new)
-                        .collect(Collectors.toList());
-
+    public ResponseEntity<List<SosEventResponse>> getMyEvents(Authentication authentication) {
+        List<SosEventResponse> responses = sosEventService.getMyEvents(authentication.getName())
+                .stream()
+                .map(SosEventResponse::new)
+                .collect(Collectors.toList());
         return ResponseEntity.ok(responses);
     }
 
@@ -60,15 +59,11 @@ public class SosEventController {
             @PathVariable Long id,
             @RequestBody Map<String, String> body) {
 
-        String userEmail = authentication.getName();
-        String pin = body.get("pin");
-
         SosEvent event = sosEventService.cancelSos(
-                userEmail,
+                authentication.getName(),
                 id,
-                pin
+                body.get("pin")
         );
-
         return ResponseEntity.ok(new SosEventResponse(event));
     }
 
@@ -78,13 +73,26 @@ public class SosEventController {
             Authentication authentication,
             @PathVariable Long id) {
 
-        String userEmail = authentication.getName();
-
-        SosEvent event = sosEventService.resolveSos(
-                userEmail,
-                id
-        );
-
+        SosEvent event = sosEventService.resolveSos(authentication.getName(), id);
         return ResponseEntity.ok(new SosEventResponse(event));
+    }
+
+    // Record a new location update for an ongoing SOS event.
+    @PostMapping("/{id}/location")
+    public ResponseEntity<TrackingPoint> updateLocation(
+            Authentication authentication,
+            @PathVariable Long id,
+            @Valid @RequestBody LocationRequest body) {
+
+        LocationUpdate saved = sosEventService.recordLocation(
+                authentication.getName(),
+                id,
+                body.latitude(),
+                body.longitude(),
+                body.accuracyMeters()
+        );
+        return ResponseEntity.ok(
+                new TrackingPoint(saved.getLatitude(), saved.getLongitude(), saved.getRecordedAt())
+        );
     }
 }

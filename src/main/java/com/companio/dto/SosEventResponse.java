@@ -3,12 +3,16 @@ package com.companio.dto;
 import com.companio.model.SosEvent;
 import java.time.LocalDateTime;
 
+/**
+ * Response payload describing an SOS event.
+ */
 public class SosEventResponse {
 
     private Long id;
     private Double latitude;
     private Double longitude;
     private String status;
+    private String trackingToken;
     private LocalDateTime triggeredAt;
     private LocalDateTime alertAt;
     private LocalDateTime cancelledAt;
@@ -19,6 +23,7 @@ public class SosEventResponse {
         this.latitude = event.getLatitude();
         this.longitude = event.getLongitude();
         this.status = event.getStatus().name();
+        this.trackingToken = event.getTrackingToken();
         this.triggeredAt = event.getTriggeredAt();
         this.alertAt = event.getAlertAt();
         this.cancelledAt = event.getCancelledAt();
@@ -39,6 +44,10 @@ public class SosEventResponse {
 
     public String getStatus() {
         return status;
+    }
+
+    public String getTrackingToken() {
+        return trackingToken;
     }
 
     public LocalDateTime getTriggeredAt() {

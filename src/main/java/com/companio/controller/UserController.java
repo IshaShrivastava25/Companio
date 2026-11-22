@@ -11,6 +11,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+/**
+ * Exposes user account and PIN management endpoints.
+ */
+
 
 @RestController
 @RequestMapping("/api/users")

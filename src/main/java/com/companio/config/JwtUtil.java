@@ -7,6 +7,10 @@ import org.springframework.stereotype.Component;
 
 import javax.crypto.SecretKey;
 import java.util.Date;
+/**
+ * Builds and verifies JWTs for authenticated users.
+ */
+
 
 @Component
 public class JwtUtil {

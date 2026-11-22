@@ -1,6 +1,10 @@
 package com.companio.dto;
 
 import com.companio.model.User;
+/**
+ * Response payload for a user profile.
+ */
+
 
 public class UserResponse {
 

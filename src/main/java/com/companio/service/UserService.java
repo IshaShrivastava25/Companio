@@ -6,6 +6,10 @@ import com.companio.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+/**
+ * Coordinates user registration, lookup, and PIN updates.
+ */
+
 
 @Service
 public class UserService {

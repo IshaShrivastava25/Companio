@@ -4,7 +4,11 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+import java.util.UUID;
 
+/**
+ * Represents a single SOS event and its lifecycle.
+ */
 @Entity
 @Table(name = "sos_events")
 public class SosEvent {
@@ -19,6 +23,9 @@ public class SosEvent {
 
     private Double latitude;
     private Double longitude;
+
+    @Column(unique = true, length = 36)
+    private String trackingToken;
 
     @Enumerated(EnumType.STRING)
     private SosStatus status;
@@ -39,6 +46,7 @@ public class SosEvent {
         event.longitude = longitude;
         event.status = SosStatus.ACTIVE;
         event.alertAt = LocalDateTime.now();
+        event.trackingToken = UUID.randomUUID().toString();
         return event;
     }
 
@@ -52,6 +60,7 @@ public class SosEvent {
         this.status = SosStatus.PENDING;
         this.triggeredAt = LocalDateTime.now();
         this.alertAt = LocalDateTime.now().plusSeconds(15);
+        this.trackingToken = UUID.randomUUID().toString();
     }
 
     public Long getId() {
@@ -68,6 +77,10 @@ public class SosEvent {
 
     public Double getLongitude() {
         return longitude;
+    }
+
+    public String getTrackingToken() {
+        return trackingToken;
     }
 
     public SosStatus getStatus() {

@@ -4,6 +4,10 @@ import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 
 import java.time.LocalDateTime;
+/**
+ * Represents a user safety timer and its state.
+ */
+
 
 @Entity
 @Table(name = "guardian_timers")

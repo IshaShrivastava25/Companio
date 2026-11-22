@@ -2,6 +2,10 @@ package com.companio.dto;
 
 import com.companio.model.GuardianTimer;
 import java.time.LocalDateTime;
+/**
+ * Response payload returned for guardian-timer status checks.
+ */
+
 
 public class GuardianTimerResponse {
 

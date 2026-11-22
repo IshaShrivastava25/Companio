@@ -9,6 +9,10 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import java.util.Map;
+/**
+ * Maps application exceptions to consistent API responses.
+ */
+
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {

@@ -12,6 +12,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.stream.Collectors;
+/**
+ * Manages trusted-contact CRUD requests.
+ */
+
 
 @RestController
 @RequestMapping("/api/contacts")

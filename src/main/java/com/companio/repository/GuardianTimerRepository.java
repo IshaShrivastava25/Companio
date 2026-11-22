@@ -6,6 +6,10 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+/**
+ * Repository for guardian-timer records.
+ */
+
 
 public interface GuardianTimerRepository extends JpaRepository<GuardianTimer, Long> {
     Optional<GuardianTimer> findTopByUser_IdAndStatusOrderByStartedAtDesc(Long userId, GuardianTimerStatus status);

@@ -6,6 +6,10 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+/**
+ * Persistent user entity storing account and safety information.
+ */
+
 
 @Entity
 @Table(name = "users")

@@ -1,11 +1,15 @@
 package com.companio.service;
 
+import com.companio.dto.TrackingPoint;
+import com.companio.dto.TrackingResponse;
+import com.companio.exception.ResourceNotFoundException;
+import com.companio.model.LocationUpdate;
 import com.companio.model.SosEvent;
 import com.companio.model.SosStatus;
 import com.companio.model.User;
+import com.companio.repository.LocationUpdateRepository;
 import com.companio.repository.SosEventRepository;
 import com.companio.repository.UserRepository;
-import com.companio.exception.ResourceNotFoundException;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -14,7 +18,14 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
+
+/**
+ * Handles SOS creation, resolution, alert logic,
+ * location updates, and live SOS tracking.
+ */
 
 @Service
 public class SosEventService {
@@ -32,6 +43,9 @@ public class SosEventService {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private LocationUpdateRepository locationUpdateRepository;
 
     // Safely attempt to notify trusted contacts.
     private void notifyContactsSafely(SosEvent event) {
@@ -176,10 +190,93 @@ public class SosEventService {
         return sosEventRepository.save(event);
     }
 
+    // Record a new location update for an ongoing SOS event.
+    @Transactional
+    public LocationUpdate recordLocation(
+            String userEmail,
+            Long eventId,
+            Double latitude,
+            Double longitude,
+            Double accuracy) {
+
+        SosEvent event = findOwnedEvent(userEmail, eventId);
+
+        if (event.getStatus() != SosStatus.PENDING
+                && event.getStatus() != SosStatus.ACTIVE) {
+
+            throw new IllegalStateException(
+                    "Location can only be updated while the SOS is live "
+                            + "(current status: " + event.getStatus() + ")"
+            );
+        }
+
+        return locationUpdateRepository.save(
+                new LocationUpdate(event, latitude, longitude, accuracy)
+        );
+    }
+
+    // Retrieve live SOS tracking information using a public tracking token.
+    @Transactional(readOnly = true)
+    public TrackingResponse getTracking(String token) {
+
+        SosEvent event = sosEventRepository.findByTrackingToken(token)
+                .filter(e -> e.getStatus() == SosStatus.ACTIVE)
+                .orElseThrow(() -> new ResourceNotFoundException(
+                        "Tracking link not found or no longer active"
+                ));
+
+        // Retrieve the latest 20 location updates.
+        List<LocationUpdate> recent = new ArrayList<>(
+                locationUpdateRepository
+                        .findTop20BySosEvent_IdOrderByRecordedAtDesc(event.getId())
+        );
+
+        // Reverse to display locations from oldest to newest.
+        Collections.reverse(recent);
+
+        // Default to the initial SOS location.
+        Double lat = event.getLatitude();
+        Double lng = event.getLongitude();
+        LocalDateTime when = event.getTriggeredAt();
+
+        // Use the latest recorded location when available.
+        if (!recent.isEmpty()) {
+            LocationUpdate last = recent.get(recent.size() - 1);
+
+            lat = last.getLatitude();
+            lng = last.getLongitude();
+            when = last.getRecordedAt();
+        }
+
+        // Convert location updates into tracking points.
+        List<TrackingPoint> points = recent.stream()
+                .map(u -> new TrackingPoint(
+                        u.getLatitude(),
+                        u.getLongitude(),
+                        u.getRecordedAt()
+                ))
+                .toList();
+
+        // Extract the user's first name.
+        String firstName = event.getUser()
+                .getName()
+                .split("\\s+")[0];
+
+        return new TrackingResponse(
+                event.getStatus().name(),
+                firstName,
+                lat,
+                lng,
+                when,
+                points
+        );
+    }
+
     // Activate pending SOS events after their confirmation windows expire.
     @Scheduled(fixedRate = 5000)
     @Transactional
     public void activatePendingSosEvents() {
+
         LocalDateTime now = LocalDateTime.now();
 
         List<SosEvent> pendingEvents =
@@ -189,6 +286,7 @@ public class SosEventService {
                 );
 
         for (SosEvent event : pendingEvents) {
+
             if (event.getStatus() != SosStatus.PENDING) {
                 continue;
             }

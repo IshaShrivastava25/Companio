@@ -9,6 +9,10 @@ import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
+/**
+ * Exposes guardian-timer lifecycle endpoints.
+ */
+
 
 @RestController
 @RequestMapping("/api/guardian-timer")

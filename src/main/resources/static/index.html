@@ -1,0 +1,566 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Companio</title>
+<link rel="icon" href="data:,">
+<style>
+:root{
+  --mist:#EDF0F6; --paper:#FFFFFF; --tint:#F5F7FB; --ink:#1B2140; --ink2:#59617F; --line:#DCE1ED;
+  --sos:#D4235A; --sosDeep:#A8174A; --safe:#12805F; --wait:#9A6700;
+  --serif:Georgia,"Times New Roman",serif;
+  --sans:"Segoe UI",system-ui,-apple-system,Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+html,body{height:100%}
+body{margin:0;background:var(--mist);color:var(--ink);font:15px/1.5 var(--sans);-webkit-font-smoothing:antialiased}
+button,input,select{font:inherit;color:inherit}
+h1,h2{font-family:var(--serif);font-weight:700;letter-spacing:-.01em;margin:0}
+h1{font-size:34px;line-height:1.1}
+h2{font-size:22px;line-height:1.2}
+p{margin:8px 0}
+a{color:var(--ink)}
+:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.muted{color:var(--ink2)}
+.small{font-size:13px}
+.center{text-align:center}
+.mono{font-family:Consolas,"SFMono-Regular",Menlo,monospace;font-size:12px}
+
+.stage{min-height:100%;display:flex;align-items:center;justify-content:center;gap:40px}
+.phone{width:100%;height:100vh;background:var(--paper);display:flex;flex-direction:column;overflow:hidden}
+.view{flex:1;overflow-y:auto;padding:26px 22px 20px}
+@media(min-width:700px){
+  .stage{padding:24px}
+  .phone{width:400px;height:min(840px,calc(100vh - 48px));border-radius:32px;border:1px solid var(--line);box-shadow:0 40px 70px -40px rgba(27,33,64,.45)}
+}
+
+.tabs{display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--line);background:var(--paper)}
+.tab{background:none;border:0;padding:10px 4px 9px;display:flex;flex-direction:column;align-items:center;gap:3px;color:var(--ink2);font-size:12px;cursor:pointer}
+.tab svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.tab[aria-current="page"]{color:var(--ink);font-weight:600}
+.tab[aria-current="page"] svg{stroke-width:2.2}
+
+label{display:block;font-size:13px;color:var(--ink2);margin:14px 0 5px}
+input,select{width:100%;height:46px;padding:0 13px;border:1px solid var(--line);border-radius:10px;background:var(--paper)}
+input:focus,select:focus{border-color:var(--ink);outline:none;box-shadow:0 0 0 2px rgba(27,33,64,.15)}
+.btn{display:inline-flex;align-items:center;justify-content:center;width:100%;height:48px;padding:0 22px;border-radius:10px;border:1px solid transparent;background:var(--ink);color:#fff;font-weight:600;cursor:pointer;margin-top:16px}
+.btn.alert{background:var(--sos)}
+.btn.safe{background:var(--safe)}
+.btn.ghost{background:var(--paper);color:var(--ink);border-color:var(--line)}
+.btn.small{height:36px;width:auto;margin:0;padding:0 14px;font-size:13px}
+.btn[disabled]{opacity:.55;cursor:not-allowed}
+.error{color:var(--sosDeep);font-size:14px;min-height:20px;margin:10px 0 0}
+
+.seg{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;margin:10px 0 6px}
+.seg.two{grid-template-columns:1fr 1fr;margin:20px 0 4px}
+.seg button{height:44px;border:1px solid var(--line);background:var(--paper);border-radius:10px;cursor:pointer;font-weight:600}
+.seg button[aria-pressed="true"]{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+.sosWrap{display:flex;flex-direction:column;align-items:center;margin:44px 0 40px}
+.sos{width:200px;height:200px;border-radius:50%;border:0;background:var(--sos);color:#fff;font-family:var(--serif);font-weight:700;font-size:46px;letter-spacing:.03em;cursor:pointer;
+  box-shadow:0 0 0 14px rgba(212,35,90,.13),0 0 0 30px rgba(212,35,90,.06);transition:transform .12s}
+.sos:active{transform:scale(.97)}
+.sos[disabled]{opacity:.6;cursor:wait}
+
+.ring{position:relative;width:224px;height:224px;margin:18px auto}
+.ring svg{width:100%;height:100%;transform:rotate(-90deg)}
+.ring .num{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;font-family:var(--serif);font-size:68px;font-weight:700;line-height:1}
+.ring .num small{font:600 13px var(--sans);color:var(--ink2);margin-top:6px}
+
+.alertbox{border-left:4px solid var(--sos);background:var(--tint);padding:14px 16px;margin:22px 0 6px;border-radius:0 10px 10px 0}
+.alertbox b{font-family:var(--serif);font-size:19px}
+.okbox{border-left:4px solid var(--safe);background:var(--tint);padding:14px 16px;margin:22px 0 6px;border-radius:0 10px 10px 0}
+.okbox b{font-family:var(--serif);font-size:19px}
+
+.big{font-family:var(--serif);font-size:72px;font-weight:700;text-align:center;margin:26px 0 8px;font-variant-numeric:tabular-nums}
+
+.rows{margin:14px 0 0;padding:0;list-style:none;border-top:1px solid var(--line)}
+.row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:13px 0;border-bottom:1px solid var(--line)}
+.row b{font-weight:600}
+.pill{display:inline-block;padding:2px 10px;border-radius:99px;font-size:12px;font-weight:600;background:var(--tint);color:var(--ink2)}
+.pill.PENDING{background:#FFF3D6;color:var(--wait)}
+.pill.ACTIVE{background:#FDE3EB;color:var(--sosDeep)}
+.pill.CANCELLED{background:#EDEFF4;color:#5b6280}
+.pill.RESOLVED{background:#DDF3EB;color:var(--safe)}
+
+.hint{font-size:13px;color:var(--ink2);border-left:3px solid var(--line);padding:2px 0 2px 10px;margin:16px 0}
+.check{display:flex;align-items:center;gap:10px;margin-top:18px;font-size:15px;color:var(--ink)}
+.check input{width:20px;height:20px}
+
+.notes{display:none;width:340px;font-size:13px}
+.notes h2{font-size:18px;margin-bottom:6px}
+.notes h3{font:600 13px var(--sans);margin:20px 0 4px}
+.notes ul{margin:6px 0;padding-left:18px}
+.notes ul.calls{list-style:none;padding:0;border-top:1px solid var(--line)}
+.calls li{padding:6px 0;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:8px;margin:0}
+.ok{color:var(--safe)}
+.bad{color:var(--sosDeep)}
+@media(min-width:1050px){.notes.on{display:block}}
+
+.toast{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:90vw;z-index:10}
+.toast.on{opacity:1}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<noscript>Companio needs JavaScript to run.</noscript>
+<div class="stage">
+  <main class="phone" id="app"></main>
+  <aside class="notes" id="notes" aria-label="Presenter notes"></aside>
+</div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+(() => {
+'use strict';
+
+/* ---------- helpers ---------- */
+const store = {
+  get(k, d = '') { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch { return d; } },
+  set(k, v) { try { localStorage.setItem(k, v); } catch {} },
+  del(k) { try { localStorage.removeItem(k); } catch {} }
+};
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const $id = id => document.getElementById(id);
+const toMs = v => {
+  if (v == null || v === '') return null;
+  if (Array.isArray(v)) { const [y, mo, d, h = 0, mi = 0, s = 0, n = 0] = v; return new Date(y, mo - 1, d, h, mi, s, Math.floor(n / 1e6)).getTime(); }
+  const t = new Date(v).getTime();
+  return Number.isNaN(t) ? null : t;
+};
+const fmt = ms => ms == null ? '' : new Date(ms).toLocaleString('en-IN', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+const mmss = ms => { const s = Math.max(0, Math.ceil(ms / 1000)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
+const payloadOf = t => { try { return JSON.parse(atob(t.split('.')[1].replace(/-/g, '+').replace(/_/g, '/'))); } catch { return {}; } };
+
+class ApiError extends Error { constructor(status, message, data) { super(message); this.status = status; this.data = data; } }
+const GENERIC = new Set(['Internal Server Error', 'Bad Request', 'Not Found', 'Conflict', 'Forbidden', 'Unauthorized', 'No message available']);
+const friendly = (e, fallback) => (e && e.message && !GENERIC.has(e.message)) ? e.message : fallback;
+
+/* ---------- state ---------- */
+const S = {
+  token: store.get('companio.token'),
+  email: '', tab: 'home', authMode: 'login', authErr: '',
+  events: [], sig: '', contacts: [], contactsLoaded: false,
+  timer: null, dur: 1, pinDraft: '', busy: false,
+  duress: new Set(JSON.parse(store.get('companio.duress', '[]'))),
+  notes: store.get('companio.notes', 'on') !== 'off',
+  log: []
+};
+const C = 2 * Math.PI * 45;
+let lastTimerState = 'none';
+let pollId = null;
+
+/* ---------- api ---------- */
+function logCall(method, path, status, quiet) {
+  if (quiet && typeof status === 'number' && status < 400) return;
+  S.log.unshift({ method, path: path.split('?')[0], status });
+  S.log.length = Math.min(S.log.length, 12);
+  renderNotes();
+}
+async function api(path, { method = 'GET', body, auth = true, quiet = false } = {}) {
+  const headers = {};
+  if (body !== undefined) headers['Content-Type'] = 'application/json';
+  if (auth && S.token) headers.Authorization = 'Bearer ' + S.token;
+  let res;
+  try {
+    res = await fetch(path, { method, headers, body: body !== undefined ? JSON.stringify(body) : undefined });
+  } catch {
+    logCall(method, path, 'offline', quiet);
+    throw new ApiError(0, 'Cannot reach the server. Is the backend running on port 8080?');
+  }
+  const text = await res.text();
+  let data = null;
+  if (text) { try { data = JSON.parse(text); } catch { data = { raw: text }; } }
+  logCall(method, path, res.status, quiet);
+  if (!res.ok) {
+    if (auth && S.token && (res.status === 401 || res.status === 403)) sessionExpired();
+    const rawText = (data && typeof data.raw === 'string' && data.raw.length < 160 && !data.raw.trim().startsWith('<')) ? data.raw.trim() : '';
+    throw new ApiError(res.status, (data && (data.error || data.message)) || rawText || ('Something went wrong (' + res.status + ').'), data);
+  }
+  return data;
+}
+
+/* ---------- derived state ---------- */
+const isLive = e => e.status === 'PENDING' || e.status === 'ACTIVE';
+const currentSos = () => S.events.filter(e => isLive(e) && !S.duress.has(e.id))[0] || null;
+const hiddenDuress = () => S.events.filter(e => isLive(e) && S.duress.has(e.id));
+const shownStatus = e => (S.duress.has(e.id) && !S.notes && isLive(e)) ? 'CANCELLED' : e.status;
+const statusLabel = { PENDING: 'Waiting', ACTIVE: 'Alerting contacts', CANCELLED: 'Cancelled', RESOLVED: 'Resolved' };
+function timerState() {
+  if (!S.timer) return 'none';
+  if (S.timer.status === 'CHECKED_IN') return 'checked';
+  return Date.now() < S.timer.expiresAt ? 'running' : 'expired';
+}
+const note = text => S.notes ? `<p class="hint">${esc(text)}</p>` : '';
+
+/* ---------- views ---------- */
+const field = (id, label, type, ac, extra = '') => `<label for="${id}">${label}</label><input id="${id}" type="${type}" autocomplete="${ac}" ${extra}>`;
+
+function authView() {
+  const reg = S.authMode === 'register';
+  return `<div class="view">
+    <h1>Companio</h1>
+    <p class="muted">Alert the people you trust, even when you can't reach your phone.</p>
+    <div class="seg two" role="group" aria-label="Account">
+      <button type="button" data-act="authmode" data-mode="login" aria-pressed="${!reg}">Sign in</button>
+      <button type="button" data-act="authmode" data-mode="register" aria-pressed="${reg}">Create account</button>
+    </div>
+    <form data-form="${reg ? 'register' : 'login'}" novalidate>
+      ${reg ? field('aName', 'Name', 'text', 'name') : ''}
+      ${field('aEmail', 'Email', 'email', 'email')}
+      ${reg ? field('aPhone', 'Phone number', 'tel', 'tel') : ''}
+      ${field('aPass', 'Password', 'password', reg ? 'new-password' : 'current-password')}
+      <p class="error" role="alert">${esc(S.authErr)}</p>
+      <button class="btn" type="submit"${S.busy ? ' disabled' : ''}>${reg ? 'Create account' : 'Sign in'}</button>
+    </form>
+  </div>`;
+}
+
+const ICONS = {
+  home: '<path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/>',
+  timer: '<circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2M9 2h6"/>',
+  contacts: '<circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><path d="M16 5.5a3 3 0 010 5.8M18 14.5c2 .8 3 2.6 3 5"/>',
+  history: '<path d="M4 6h16M4 12h16M4 18h10"/>',
+  settings: '<path d="M4 7h10M18 7h2M4 17h2M10 17h10"/><circle cx="16" cy="7" r="2"/><circle cx="8" cy="17" r="2"/>'
+};
+const TABS = [['home', 'SOS'], ['timer', 'Timer'], ['contacts', 'Contacts'], ['history', 'History'], ['settings', 'Settings']];
+
+function appView() {
+  const body = { home: homeView, timer: timerView, contacts: contactsView, history: historyView, settings: settingsView }[S.tab]();
+  const tabs = TABS.map(([k, label]) =>
+    `<button class="tab" data-act="tab" data-tab="${k}"${S.tab === k ? ' aria-current="page"' : ''}>
+      <svg viewBox="0 0 24 24" aria-hidden="true">${ICONS[k]}</svg>${label}</button>`).join('');
+  return `<div class="view" id="scroller">${body}</div><nav class="tabs" aria-label="Main">${tabs}</nav>`;
+}
+
+function locationLine(e) {
+  return (e.latitude != null && e.longitude != null)
+    ? `Location: <a href="https://maps.google.com/?q=${e.latitude},${e.longitude}" target="_blank" rel="noopener">${e.latitude}, ${e.longitude}</a>`
+    : 'No location was sent.';
+}
+
+function homeView() {
+  const sos = currentSos();
+  const hid = hiddenDuress();
+  let main;
+  if (!sos) {
+    const n = S.contacts.length;
+    const line = !S.contactsLoaded ? '' : n
+      ? `Alerts your ${n} trusted contact${n === 1 ? '' : 's'}. You get 15 seconds to cancel.`
+      : 'You have no trusted contacts yet. Add one in Contacts first.';
+    main = `<h2>Ready</h2><p class="muted small">Signed in as ${esc(S.email)}</p>
+      <div class="sosWrap"><button class="sos" data-act="sos" aria-label="Send SOS"${S.busy ? ' disabled' : ''}>SOS</button></div>
+      <p class="center muted">${esc(line)}</p>`;
+  } else if (sos.status === 'PENDING') {
+    const end = toMs(sos.alertAt) ?? 0, start = toMs(sos.triggeredAt) ?? end - 15000;
+    const left = Math.max(0, end - Date.now()), total = Math.max(1, end - start);
+    main = `<h2>SOS starting</h2>
+      <div class="ring"><svg viewBox="0 0 100 100" aria-hidden="true">
+        <circle cx="50" cy="50" r="45" fill="none" stroke="var(--line)" stroke-width="6"/>
+        <circle id="arc" cx="50" cy="50" r="45" fill="none" stroke="var(--sos)" stroke-width="6" stroke-linecap="round" stroke-dasharray="${C}" stroke-dashoffset="${C * (1 - left / total)}"/>
+      </svg><div class="num"><span id="count">${Math.ceil(left / 1000)}</span><small>seconds</small></div></div>
+      <p class="center">Your contacts are alerted when this reaches zero.</p>
+      <label for="pin">PIN to cancel</label>
+      <input id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="6" value="${esc(S.pinDraft)}">
+      <button class="btn" data-act="cancel" data-id="${sos.id}"${S.busy ? ' disabled' : ''}>Cancel SOS</button>
+      ${note('Your real PIN cancels the SOS. Your duress PIN looks the same on screen, but the server still sends the alert.')}`;
+  } else {
+    main = `<h2>SOS active</h2>
+      <div class="alertbox"><b>Your contacts are being alerted.</b>
+        <p class="small">Started ${esc(fmt(toMs(sos.triggeredAt)))}.<br>${locationLine(sos)}</p></div>
+      <button class="btn safe" data-act="resolve" data-id="${sos.id}"${S.busy ? ' disabled' : ''}>I'm safe</button>
+      ${note('Delivery is simulated: the server log prints one [ALERT] line per trusted contact.')}`;
+  }
+  const banner = (hid.length && S.notes)
+    ? `<div class="hint">Presenter note: the screen shows no alert, but the server has alert #${hid.map(e => e.id).join(', #')} (${esc(hid[0].status)}) because a duress PIN was used.
+         <br><button class="btn ghost small" data-act="resolve" data-id="${hid[0].id}" style="margin-top:8px">Clean up this alert</button></div>`
+    : '';
+  return main + banner;
+}
+
+function timerView() {
+  const st = timerState();
+  let body;
+  if (st === 'running') {
+    body = `<div class="big" id="tcount">${mmss(S.timer.expiresAt - Date.now())}</div>
+      <p class="center muted">If you don't check in before this reaches zero, your contacts are alerted automatically.</p>
+      <button class="btn safe" data-act="checkin">I've arrived safely</button>`;
+  } else if (st === 'checked') {
+    body = `<div class="okbox"><b>Checked in.</b><p class="small">The timer is closed and no alert will be sent.</p></div>
+      <button class="btn ghost" data-act="tclear">Start another timer</button>`;
+  } else if (st === 'expired') {
+    body = `<div class="alertbox"><b>Time's up.</b><p class="small">No check-in arrived, so your contacts are being alerted.</p></div>
+      ${note('The server checks for expired timers every 60 seconds, so the alert can appear up to a minute after zero. SOS from a timer skips the 15-second cancel window.')}
+      <button class="btn" data-act="tab" data-tab="home">See the alert</button>
+      <button class="btn ghost" data-act="tclear">Start another timer</button>`;
+  } else {
+    const opts = [1, 5, 15, 30, 60].map(m => `<button type="button" data-act="dur" data-m="${m}" aria-pressed="${S.dur === m}">${m}m</button>`).join('');
+    body = `<p class="muted">Set how long your journey should take. Check in when you arrive.</p>
+      <div class="seg" role="group" aria-label="Minutes">${opts}</div>
+      <button class="btn" data-act="tstart"${S.busy ? ' disabled' : ''}>Start timer for ${S.dur} minute${S.dur === 1 ? '' : 's'}</button>
+      ${note('Use 1 minute for the demo.')}`;
+  }
+  return `<h2>Guardian timer</h2>${body}`;
+}
+
+function contactsView() {
+  const rows = S.contacts.map(c => `<li class="row"><div><b>${esc(c.name)}</b><div class="muted small">${esc(c.relationship || 'Contact')}</div></div><span class="mono">${esc(c.phoneNumber)}</span></li>`).join('');
+  return `<h2>Trusted contacts</h2><p class="muted small">These people are alerted when an SOS goes out.</p>
+    ${S.contacts.length ? `<ul class="rows">${rows}</ul>` : '<p class="muted">No contacts yet. Add the first person below.</p>'}
+    <form data-form="contact" novalidate>
+      ${field('cName', 'Name', 'text', 'off')}${field('cPhone', 'Phone number', 'tel', 'off')}${field('cRel', 'Relationship', 'text', 'off', 'placeholder="Mother, friend, roommate"')}
+      <p class="error" role="alert" id="cErr"></p>
+      <button class="btn" type="submit"${S.busy ? ' disabled' : ''}>Add contact</button>
+    </form>`;
+}
+
+function historyView() {
+  const rows = S.events.map(e => {
+    const st = shownStatus(e);
+    const raw = S.notes ? ` <span class="mono muted">${esc(e.status)}${S.duress.has(e.id) ? ' · duress cancel' : ''}</span>` : '';
+    const action = st === 'ACTIVE' ? `<button class="btn small" data-act="resolve" data-id="${e.id}">I'm safe</button>` : '';
+    return `<li class="row"><div><span class="pill ${st}">${esc(statusLabel[st])}</span>${raw}
+      <div class="small">${esc(fmt(toMs(e.triggeredAt)))}</div><div class="muted small">${locationLine(e)}</div></div>${action}</li>`;
+  }).join('');
+  return `<h2>History</h2>${S.events.length ? `<ul class="rows">${rows}</ul>` : '<p class="muted">No alerts yet. Your SOS history will appear here.</p>'}`;
+}
+
+function settingsView() {
+  return `<h2>Settings</h2>
+    <form data-form="pins" novalidate>
+      <p class="muted">Choose two PINs of 4 to 6 digits. The duress PIN is for when someone forces you to cancel: it looks like a normal cancel, but the alert still goes out.</p>
+      ${field('sPin', 'PIN', 'password', 'off', 'inputmode="numeric" maxlength="6"')}
+      ${field('sDuress', 'Duress PIN', 'password', 'off', 'inputmode="numeric" maxlength="6"')}
+      <p class="error" role="alert" id="sErr"></p>
+      <button class="btn" type="submit"${S.busy ? ' disabled' : ''}>Save PINs</button>
+    </form>
+    <label class="check"><input type="checkbox" id="notesToggle"${S.notes ? ' checked' : ''}> Show presenter notes</label>
+    <button class="btn ghost" data-act="logout">Sign out</button>
+    <p class="hint">Companio web prototype. It stands in for the planned mobile app. Alerts to contacts are simulated: the server prints who it would notify.</p>`;
+}
+
+function renderNotes() {
+  const el = $id('notes'); if (!el) return;
+  if (!S.notes || !S.token) { el.classList.remove('on'); el.innerHTML = ''; return; }
+  el.classList.add('on');
+  const calls = S.log.length
+    ? S.log.map(c => `<li><span class="mono">${esc(c.method)} ${esc(c.path)}</span><span class="mono ${typeof c.status === 'number' && c.status < 400 ? 'ok' : 'bad'}">${esc(c.status)}</span></li>`).join('')
+    : '<li class="muted">Nothing yet. Press a button.</li>';
+  el.innerHTML = `<h2>Behind the screen</h2>
+    <p class="muted">Each action on the phone is a real request to the Spring Boot backend on this machine. Newest first.</p>
+    <ul class="calls">${calls}</ul>
+    <h3>Working now</h3>
+    <ul><li>Accounts, BCrypt password hashing, JWT login</li><li>Trusted contacts, scoped to the signed-in user</li><li>SOS states: pending, active, cancelled, resolved</li><li>PIN cancel and duress PIN</li><li>Guardian timer with a background scheduler</li></ul>
+    <h3>Simulated</h3>
+    <ul><li>Alerts to contacts are printed in the server log, not sent as SMS or push</li><li>If the browser blocks location, a demo location is used</li></ul>
+    <h3>Planned</h3>
+    <ul><li>React Native mobile app, shake trigger, fake call</li><li>Real push and SMS delivery, audio upload</li><li>ML distress detection from audio</li></ul>`;
+}
+
+/* ---------- render ---------- */
+function render(preserve = false) {
+  const vals = {};
+  if (preserve) document.querySelectorAll('input[id]').forEach(i => { vals[i.id] = i.type === 'checkbox' ? i.checked : i.value; });
+  const ae = document.activeElement, aid = ae && ae.id;
+  let sel = null; try { sel = ae.selectionStart; } catch {}
+  const sc = $id('scroller'), top = sc ? sc.scrollTop : 0;
+
+  $id('app').innerHTML = S.token ? appView() : authView();
+  renderNotes();
+
+  if (preserve) Object.entries(vals).forEach(([id, v]) => { const el = $id(id); if (el && el.type !== 'checkbox' && !el.value) el.value = v; });
+  const sc2 = $id('scroller'); if (sc2) sc2.scrollTop = top;
+  if (aid) { const el = $id(aid); if (el) { el.focus({ preventScroll: true }); try { if (sel != null) el.setSelectionRange(sel, sel); } catch {} } }
+  lastTimerState = timerState();
+}
+
+let toastTimer;
+function toast(msg) {
+  const t = $id('toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove('on'), 3200);
+}
+
+/* ---------- data ---------- */
+async function refreshEvents(quiet = false) {
+  const list = await api('/api/sos', { quiet });
+  S.events = (Array.isArray(list) ? list : []).sort((a, b) => b.id - a.id);
+  const sig = JSON.stringify(S.events.map(e => [e.id, e.status]));
+  if (sig !== S.sig) { S.sig = sig; render(true); }
+}
+async function loadContacts() {
+  const list = await api('/api/contacts');
+  S.contacts = Array.isArray(list) ? list : [];
+  S.contactsLoaded = true;
+  render(true);
+}
+function loadTimer() {
+  try { S.timer = JSON.parse(store.get('companio.timer.' + S.email, 'null')); } catch { S.timer = null; }
+}
+const saveTimer = () => S.timer ? store.set('companio.timer.' + S.email, JSON.stringify(S.timer)) : store.del('companio.timer.' + S.email);
+const saveDuress = () => store.set('companio.duress', JSON.stringify([...S.duress]));
+
+function startSession(token) {
+  S.token = token; store.set('companio.token', token);
+  S.email = payloadOf(token).sub || ''; S.authErr = ''; S.tab = 'home';
+  S.events = []; S.sig = ''; S.contacts = []; S.contactsLoaded = false;
+  loadTimer(); render();
+  Promise.allSettled([refreshEvents(true), loadContacts()]).then(() => render(true));
+  clearInterval(pollId);
+  pollId = setInterval(() => { if (S.token) refreshEvents(true).catch(() => {}); }, 2000);
+}
+function sessionExpired() {
+  if (!S.token) return;
+  S.token = ''; store.del('companio.token'); clearInterval(pollId);
+  S.authMode = 'login'; S.authErr = 'Your session expired. Sign in again.'; render();
+}
+
+/* ---------- actions ---------- */
+function getPosition() {
+  const fallback = { lat: 30.3165, lng: 78.0322, approx: true };
+  const real = new Promise(resolve => {
+    if (!navigator.geolocation) return resolve(fallback);
+    navigator.geolocation.getCurrentPosition(
+      p => resolve({ lat: +p.coords.latitude.toFixed(5), lng: +p.coords.longitude.toFixed(5), approx: false }),
+      () => resolve(fallback), { timeout: 3000, maximumAge: 60000 });
+  });
+  return Promise.race([real, new Promise(r => setTimeout(() => r(fallback), 3500))]);
+}
+async function withBusy(fn) {
+  if (S.busy) return;
+  S.busy = true; render(true);
+  try { await fn(); } finally { S.busy = false; render(true); }
+}
+
+const actions = {
+  tab(el) { S.tab = el.dataset.tab; render(); if (S.tab === 'contacts') loadContacts().catch(() => {}); if (S.tab === 'history') refreshEvents().catch(() => {}); },
+  authmode(el) { S.authMode = el.dataset.mode; S.authErr = ''; render(); },
+  dur(el) { S.dur = +el.dataset.m; render(); },
+  logout() { S.token = ''; store.del('companio.token'); clearInterval(pollId); S.authErr = ''; S.authMode = 'login'; S.log = []; render(); },
+  tclear() { S.timer = null; saveTimer(); render(); },
+
+  sos: () => withBusy(async () => {
+    const pos = await getPosition();
+    try {
+      await api('/api/sos/trigger', { method: 'POST', body: { latitude: pos.lat, longitude: pos.lng } });
+      S.pinDraft = ''; await refreshEvents(true);
+      toast(pos.approx ? 'SOS started with a demo location.' : 'SOS started.');
+    } catch (e) { toast(friendly(e, 'Could not start the SOS.')); }
+  }),
+
+  cancel: el => withBusy(async () => {
+    const id = +el.dataset.id, pin = S.pinDraft.trim();
+    if (!/^\d{4,6}$/.test(pin)) { toast('Enter your 4 to 6 digit PIN.'); return; }
+    try {
+      const ev = await api(`/api/sos/${id}/cancel`, { method: 'PUT', body: { pin } });
+      if (ev && ev.status === 'PENDING') { S.duress.add(id); saveDuress(); }   // duress PIN: server kept the alert
+      S.pinDraft = ''; await refreshEvents(true); toast('SOS cancelled.');
+    } catch (e) { S.pinDraft = ''; toast(friendly(e, 'Could not cancel the SOS.')); }
+  }),
+
+  resolve: el => withBusy(async () => {
+    try {
+      await api(`/api/sos/${+el.dataset.id}/resolve`, { method: 'PUT' });
+      await refreshEvents(true); toast('Marked safe.');
+    } catch (e) { toast(friendly(e, 'Could not update the SOS.')); }
+  }),
+
+  tstart: () => withBusy(async () => {
+    try {
+      const t = await api('/api/guardian-timer/start', { method: 'POST', body: { durationMinutes: S.dur } });
+      S.timer = { id: t.id, status: 'ACTIVE', expiresAt: toMs(t.expiresAt) ?? Date.now() + S.dur * 60000 };
+      saveTimer(); toast('Timer started.');
+    } catch (e) { toast(friendly(e, 'Could not start the timer.')); }
+  }),
+
+  checkin: () => withBusy(async () => {
+    try {
+      await api('/api/guardian-timer/check-in', { method: 'PUT' });
+      S.timer.status = 'CHECKED_IN'; saveTimer(); toast('Checked in.');
+    } catch (e) { toast(friendly(e, 'No active timer was found on the server.')); }
+  })
+};
+
+const forms = {
+  async login(f) {
+    const email = $id('aEmail').value.trim(), password = $id('aPass').value;
+    if (!email || !password) { S.authErr = 'Enter your email and password.'; return render(true); }
+    await withBusy(async () => {
+      try { const r = await api('/api/auth/login', { method: 'POST', auth: false, body: { email, password } }); startSession(r.token); }
+      catch (e) { S.authErr = friendly(e, 'Could not sign in.'); }
+    });
+  },
+  async register(f) {
+    const name = $id('aName').value.trim(), email = $id('aEmail').value.trim(), phoneNumber = $id('aPhone').value.trim(), password = $id('aPass').value;
+    if (!name || !email || !password) { S.authErr = 'Name, email and password are required.'; return render(true); }
+    await withBusy(async () => {
+      try {
+        await api('/api/users', { method: 'POST', auth: false, body: { name, email, password, phoneNumber } });
+        const r = await api('/api/auth/login', { method: 'POST', auth: false, body: { email, password } });
+        startSession(r.token);
+      } catch (e) { S.authErr = friendly(e, 'Could not create the account. That email may already be registered.'); }
+    });
+  },
+  async contact(f) {
+    const name = $id('cName').value.trim(), phoneNumber = $id('cPhone').value.trim(), relationship = $id('cRel').value.trim();
+    if (!name || !phoneNumber) { $id('cErr').textContent = 'Name and phone number are required.'; return; }
+    await withBusy(async () => {
+      try { await api('/api/contacts', { method: 'POST', body: { name, phoneNumber, relationship } }); await loadContacts(); toast('Contact added.'); }
+      catch (e) { toast(friendly(e, 'Could not add the contact.')); }
+    });
+  },
+  async pins(f) {
+    const pin = $id('sPin').value.trim(), duressPin = $id('sDuress').value.trim(), err = $id('sErr');
+    if (!/^\d{4,6}$/.test(pin) || !/^\d{4,6}$/.test(duressPin)) { err.textContent = 'Both PINs must be 4 to 6 digits.'; return; }
+    if (pin === duressPin) { err.textContent = 'The duress PIN must be different from your PIN.'; return; }
+    await withBusy(async () => {
+      try { await api('/api/users/me/pins', { method: 'PUT', body: { pin, duressPin } }); toast('PINs saved.'); }
+      catch (e) { toast(friendly(e, 'Could not save the PINs.')); }
+    });
+  }
+};
+
+/* ---------- events ---------- */
+document.addEventListener('click', e => {
+  const el = e.target.closest('[data-act]');
+  if (el && actions[el.dataset.act]) actions[el.dataset.act](el);
+});
+document.addEventListener('submit', e => {
+  const f = e.target.closest('form[data-form]');
+  if (f) { e.preventDefault(); forms[f.dataset.form](f); }
+});
+document.addEventListener('input', e => { if (e.target.id === 'pin') S.pinDraft = e.target.value; });
+document.addEventListener('change', e => {
+  if (e.target.id === 'notesToggle') { S.notes = e.target.checked; store.set('companio.notes', S.notes ? 'on' : 'off'); render(true); }
+});
+
+/* ---------- live countdowns ---------- */
+const poked = new Set();
+setInterval(() => {
+  if (!S.token) return;
+  const st = timerState();
+  if (st !== lastTimerState) { render(true); if (st === 'expired') setTimeout(() => refreshEvents(true).catch(() => {}), 1500); return; }
+  if (S.tab === 'home') {
+    const sos = currentSos();
+    if (sos && sos.status === 'PENDING') {
+      const end = toMs(sos.alertAt) ?? 0, start = toMs(sos.triggeredAt) ?? end - 15000;
+      const left = Math.max(0, end - Date.now()), total = Math.max(1, end - start);
+      const c = $id('count'), a = $id('arc');
+      if (c) c.textContent = Math.ceil(left / 1000);
+      if (a) a.setAttribute('stroke-dashoffset', C * (1 - left / total));
+      if (left === 0 && !poked.has(sos.id)) { poked.add(sos.id); setTimeout(() => refreshEvents(true).catch(() => {}), 1200); setTimeout(() => refreshEvents(true).catch(() => {}), 6000); }
+    }
+  }
+  if (S.tab === 'timer' && st === 'running') { const t = $id('tcount'); if (t) t.textContent = mmss(S.timer.expiresAt - Date.now()); }
+}, 250);
+
+/* ---------- start ---------- */
+(function init() {
+  const p = payloadOf(S.token || '');
+  if (S.token && p.exp && p.exp * 1000 < Date.now()) { S.token = ''; store.del('companio.token'); }
+  if (S.token) startSession(S.token); else render();
+})();
+})();
+</script>
+</body>
+</html>

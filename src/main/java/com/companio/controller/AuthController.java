@@ -10,6 +10,10 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 import java.util.Optional;
+/**
+ * Handles user login and token creation.
+ */
+
 
 @RestController
 @RequestMapping("/api/auth")

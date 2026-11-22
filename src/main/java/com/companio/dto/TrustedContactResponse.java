@@ -1,6 +1,10 @@
 package com.companio.dto;
 
 import com.companio.model.TrustedContact;
+/**
+ * Response payload for a trusted-contact record.
+ */
+
 
 public class TrustedContactResponse {
 
