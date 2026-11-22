@@ -33,4 +33,5 @@ build/
 .vscode/
 
 # Environment / secrets
-src/main/resources/application.propertiespreflight.ps1
+src/main/resources/application.properties
+preflight.ps1
