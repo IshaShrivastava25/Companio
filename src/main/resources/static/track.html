@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Companio live tracking</title>
+<style>
+  body { font-family: system-ui, sans-serif; margin: 0; background: #fff5f5; color: #222; }
+  main { max-width: 420px; margin: 0 auto; padding: 24px 16px; }
+  h1 { font-size: 1.3rem; margin: 0 0 4px; }
+  .card { background: #fff; border-radius: 12px; padding: 16px; margin-top: 16px; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+  .live { color: #c62828; font-weight: 700; }
+  .ended { color: #555; font-weight: 700; }
+  a.btn { display: block; text-align: center; background: #c62828; color: #fff; padding: 12px; border-radius: 8px; text-decoration: none; margin-top: 12px; }
+  ul { padding-left: 18px; font-size: .9rem; color: #444; }
+  small { color: #666; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Companio live tracking</h1>
+  <div id="status" class="card">Loading...</div>
+  <div id="points" class="card" hidden>
+    <strong>Recent positions</strong>
+    <ul id="list"></ul>
+  </div>
+  <p><small>This link works only while the SOS is active.</small></p>
+</main>
+<script>
+  const token = new URLSearchParams(location.search).get("t");
+  const box = document.getElementById("status");
+  const pts = document.getElementById("points");
+  const list = document.getElementById("list");
+  let timer = null;
+
+  function fmt(t) { return t ? new Date(t).toLocaleTimeString() : ""; }
+
+  function ended() {
+    clearInterval(timer);
+    pts.hidden = true;
+    box.innerHTML = "";
+    const p = document.createElement("div");
+    p.className = "ended";
+    p.textContent = "This SOS is no longer active, or the link is not valid.";
+    box.appendChild(p);
+  }
+
+  async function refresh() {
+    if (!token) { ended(); return; }
+    try {
+      const r = await fetch("/api/track/" + encodeURIComponent(token));
+      if (!r.ok) { ended(); return; }
+      const d = await r.json();
+      box.innerHTML = "";
+      const h = document.createElement("div");
+      h.className = "live";
+      h.textContent = d.name + " needs help (SOS active)";
+      const c = document.createElement("div");
+      c.textContent = "Position: " + d.latitude.toFixed(5) + ", " + d.longitude.toFixed(5);
+      const u = document.createElement("small");
+      u.textContent = "Last update: " + fmt(d.lastUpdated);
+      const a = document.createElement("a");
+      a.className = "btn";
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.href = "https://www.google.com/maps?q=" + d.latitude + "," + d.longitude;
+      a.textContent = "Open in Google Maps";
+      box.append(h, c, u, a);
+
+      list.innerHTML = "";
+      (d.recentPoints || []).slice().reverse().forEach(function (p) {
+        const li = document.createElement("li");
+        li.textContent = fmt(p.recordedAt) + "  " + p.latitude.toFixed(5) + ", " + p.longitude.toFixed(5);
+        list.appendChild(li);
+      });
+      pts.hidden = !(d.recentPoints && d.recentPoints.length);
+    } catch (e) {
+      box.textContent = "Connection problem. Retrying...";
+    }
+  }
+
+  refresh();
+  timer = setInterval(refresh, 5000);
+</script>
+</body>
+</html>
