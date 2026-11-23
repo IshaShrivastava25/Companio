@@ -553,7 +553,25 @@ setInterval(() => {
   }
   if (S.tab === 'timer' && st === 'running') { const t = $id('tcount'); if (t) t.textContent = mmss(S.timer.expiresAt - Date.now()); }
 }, 250);
-
+// Live location: while an SOS is ACTIVE, send the browser's position every 10 seconds
+setInterval(() => {
+  if (!S.token || !navigator.geolocation) return;
+  const live = (S.events || []).filter(e => e.status === 'ACTIVE');
+  if (!live.length) return;
+  navigator.geolocation.getCurrentPosition(
+    p => {
+      live.forEach(e => {
+        api('/api/sos/' + e.id + '/location', {
+          method: 'POST',
+          body: { latitude: p.coords.latitude, longitude: p.coords.longitude, accuracyMeters: p.coords.accuracy },
+          quiet: true
+        }).catch(() => {});
+      });
+    },
+    () => {},
+    { enableHighAccuracy: true, timeout: 8000, maximumAge: 5000 }
+  );
+}, 10000);
 /* ---------- start ---------- */
 (function init() {
   const p = payloadOf(S.token || '');
