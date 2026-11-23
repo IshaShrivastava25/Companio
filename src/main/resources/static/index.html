@@ -265,10 +265,14 @@ function homeView() {
       <input id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="6" value="${esc(S.pinDraft)}">
       <button class="btn" data-act="cancel" data-id="${sos.id}"${S.busy ? ' disabled' : ''}>Cancel SOS</button>
       ${note('Your real PIN cancels the SOS. Your duress PIN looks the same on screen, but the server still sends the alert.')}`;
-  } else {
+    } else {
+    const trackUrl = sos.trackingToken ? location.origin + '/track.html?t=' + sos.trackingToken : '';
     main = `<h2>SOS active</h2>
       <div class="alertbox"><b>Your contacts are being alerted.</b>
         <p class="small">Started ${esc(fmt(toMs(sos.triggeredAt)))}.<br>${locationLine(sos)}</p></div>
+      ${trackUrl ? `<div class="hint"><b>Live tracking link</b><br>
+        <a href="${esc(trackUrl)}" target="_blank" rel="noopener" class="small" style="word-break:break-all">${esc(trackUrl)}</a><br>
+        <button class="btn ghost small" style="margin-top:8px" data-url="${esc(trackUrl)}" onclick="navigator.clipboard.writeText(this.dataset.url).then(()=>{this.textContent='Copied'})">Copy link</button></div>` : ''}
       <button class="btn safe" data-act="resolve" data-id="${sos.id}"${S.busy ? ' disabled' : ''}>I'm safe</button>
       ${note('Delivery is simulated: the server log prints one [ALERT] line per trusted contact.')}`;
   }
