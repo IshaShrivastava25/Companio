@@ -141,7 +141,7 @@ const friendly = (e, fallback) => (e && e.message && !GENERIC.has(e.message)) ? 
 const S = {
   token: store.get('companio.token'),
   email: '', tab: 'home', authMode: 'login', authErr: '',
-  events: [], sig: '', contacts: [], contactsLoaded: false,
+  events: [], sig: '', contacts: [], contactsLoaded: false, editId: null,
   timer: null, dur: 1, pinDraft: '', busy: false,
   duress: new Set(JSON.parse(store.get('companio.duress', '[]'))),
   notes: store.get('companio.notes', 'on') !== 'off',
@@ -265,7 +265,7 @@ function homeView() {
       <input id="pin" type="password" inputmode="numeric" autocomplete="off" maxlength="6" value="${esc(S.pinDraft)}">
       <button class="btn" data-act="cancel" data-id="${sos.id}"${S.busy ? ' disabled' : ''}>Cancel SOS</button>
       ${note('Your real PIN cancels the SOS. Your duress PIN looks the same on screen, but the server still sends the alert.')}`;
-    } else {
+  } else {
     const trackUrl = sos.trackingToken ? location.origin + '/track.html?t=' + sos.trackingToken : '';
     main = `<h2>SOS active</h2>
       <div class="alertbox"><b>Your contacts are being alerted.</b>
@@ -274,7 +274,7 @@ function homeView() {
         <a href="${esc(trackUrl)}" target="_blank" rel="noopener" class="small" style="word-break:break-all">${esc(trackUrl)}</a><br>
         <button class="btn ghost small" style="margin-top:8px" data-url="${esc(trackUrl)}" onclick="navigator.clipboard.writeText(this.dataset.url).then(()=>{this.textContent='Copied'})">Copy link</button></div>` : ''}
       <button class="btn safe" data-act="resolve" data-id="${sos.id}"${S.busy ? ' disabled' : ''}>I'm safe</button>
-      ${note('Delivery is simulated: the server log prints one [ALERT] line per trusted contact.')}`;
+      ${note('Contacts who connected Telegram receive this alert there. Others only appear in the server log.')}`;
   }
   const banner = (hid.length && S.notes)
     ? `<div class="hint">Presenter note: the screen shows no alert, but the server has alert #${hid.map(e => e.id).join(', #')} (${esc(hid[0].status)}) because a duress PIN was used.
@@ -309,7 +309,29 @@ function timerView() {
 }
 
 function contactsView() {
-  const rows = S.contacts.map(c => `<li class="row"><div><b>${esc(c.name)}</b><div class="muted small">${esc(c.relationship || 'Contact')}</div></div><span class="mono">${esc(c.phoneNumber)}</span></li>`).join('');
+  const rows = S.contacts.map(c => {
+    if (S.editId === c.id) {
+      return `<li class="row" style="display:block"><form data-form="contactedit" data-id="${c.id}" novalidate>
+        <label for="eName">Name</label><input id="eName" type="text" value="${esc(c.name)}">
+        <label for="ePhone">Phone number</label><input id="ePhone" type="tel" value="${esc(c.phoneNumber)}">
+        <label for="eRel">Relationship</label><input id="eRel" type="text" value="${esc(c.relationship || '')}">
+        <p class="error" role="alert" id="eErr"></p>
+        <div style="display:flex;gap:8px;margin-top:10px">
+          <button class="btn small" type="submit">Save</button>
+          <button class="btn ghost small" type="button" data-act="editcancel">Cancel</button>
+        </div></form></li>`;
+    }
+    const tg = c.telegramConnected
+      ? '<div class="small ok">Telegram connected</div>'
+      : (c.connectLink
+        ? `<div class="small"><a href="${esc(c.connectLink)}" target="_blank" rel="noopener">Connect Telegram</a> · <a href="#" data-url="${esc(c.connectLink)}" onclick="event.preventDefault();navigator.clipboard.writeText(this.dataset.url).then(()=>{this.textContent='Copied'})">Copy link</a></div>`
+        : '<div class="small muted">Telegram not set up</div>');
+    return `<li class="row"><div><b>${esc(c.name)}</b><div class="muted small">${esc(c.relationship || 'Contact')}</div><div class="mono">${esc(c.phoneNumber)}</div>${tg}</div>
+      <div style="display:flex;gap:6px">
+        <button class="btn ghost small" data-act="editc" data-id="${c.id}">Edit</button>
+        <button class="btn ghost small" data-act="delc" data-id="${c.id}">Delete</button>
+      </div></li>`;
+  }).join('');
   return `<h2>Trusted contacts</h2><p class="muted small">These people are alerted when an SOS goes out.</p>
     ${S.contacts.length ? `<ul class="rows">${rows}</ul>` : '<p class="muted">No contacts yet. Add the first person below.</p>'}
     <form data-form="contact" novalidate>
@@ -341,7 +363,7 @@ function settingsView() {
     </form>
     <label class="check"><input type="checkbox" id="notesToggle"${S.notes ? ' checked' : ''}> Show presenter notes</label>
     <button class="btn ghost" data-act="logout">Sign out</button>
-    <p class="hint">Companio web prototype. It stands in for the planned mobile app. Alerts to contacts are simulated: the server prints who it would notify.</p>`;
+    <p class="hint">Companio web prototype. It stands in for the planned mobile app.</p>`;
 }
 
 function renderNotes() {
@@ -355,11 +377,11 @@ function renderNotes() {
     <p class="muted">Each action on the phone is a real request to the Spring Boot backend on this machine. Newest first.</p>
     <ul class="calls">${calls}</ul>
     <h3>Working now</h3>
-    <ul><li>Accounts, BCrypt password hashing, JWT login</li><li>Trusted contacts, scoped to the signed-in user</li><li>SOS states: pending, active, cancelled, resolved</li><li>PIN cancel and duress PIN</li><li>Guardian timer with a background scheduler</li></ul>
+    <ul><li>Accounts, BCrypt password hashing, JWT login</li><li>Trusted contacts, scoped to the signed-in user</li><li>SOS states: pending, active, cancelled, resolved</li><li>PIN cancel and duress PIN</li><li>Guardian timer with a background scheduler</li><li>Live location and a public tracking link</li><li>Telegram alerts to connected contacts</li></ul>
     <h3>Simulated</h3>
-    <ul><li>Alerts to contacts are printed in the server log, not sent as SMS or push</li><li>If the browser blocks location, a demo location is used</li></ul>
+    <ul><li>Contacts who have not connected Telegram only appear in the server log</li><li>If the browser blocks location, a demo location is used</li></ul>
     <h3>Planned</h3>
-    <ul><li>React Native mobile app, shake trigger, fake call</li><li>Real push and SMS delivery, audio upload</li><li>ML distress detection from audio</li></ul>`;
+    <ul><li>Android app, offline SMS fallback, shake trigger</li><li>WhatsApp and server SMS delivery</li><li>On-device ML distress detection from audio</li></ul>`;
 }
 
 /* ---------- render ---------- */
@@ -407,7 +429,7 @@ const saveDuress = () => store.set('companio.duress', JSON.stringify([...S.dures
 function startSession(token) {
   S.token = token; store.set('companio.token', token);
   S.email = payloadOf(token).sub || ''; S.authErr = ''; S.tab = 'home';
-  S.events = []; S.sig = ''; S.contacts = []; S.contactsLoaded = false;
+  S.events = []; S.sig = ''; S.contacts = []; S.contactsLoaded = false; S.editId = null;
   loadTimer(); render();
   Promise.allSettled([refreshEvents(true), loadContacts()]).then(() => render(true));
   clearInterval(pollId);
@@ -442,6 +464,15 @@ const actions = {
   dur(el) { S.dur = +el.dataset.m; render(); },
   logout() { S.token = ''; store.del('companio.token'); clearInterval(pollId); S.authErr = ''; S.authMode = 'login'; S.log = []; render(); },
   tclear() { S.timer = null; saveTimer(); render(); },
+  editc(el) { S.editId = +el.dataset.id; render(); },
+  editcancel() { S.editId = null; render(); },
+  delc: el => withBusy(async () => {
+    if (!confirm('Delete this contact?')) return;
+    try {
+      await api('/api/contacts/' + (+el.dataset.id), { method: 'DELETE' });
+      await loadContacts(); toast('Contact deleted.');
+    } catch (e) { toast(friendly(e, 'Could not delete the contact.')); }
+  }),
 
   sos: () => withBusy(async () => {
     const pos = await getPosition();
@@ -513,6 +544,16 @@ const forms = {
       catch (e) { toast(friendly(e, 'Could not add the contact.')); }
     });
   },
+  async contactedit(f) {
+    const id = +f.dataset.id, name = $id('eName').value.trim(), phoneNumber = $id('ePhone').value.trim(), relationship = $id('eRel').value.trim();
+    if (!name || !phoneNumber) { $id('eErr').textContent = 'Name and phone number are required.'; return; }
+    await withBusy(async () => {
+      try {
+        await api('/api/contacts/' + id, { method: 'PUT', body: { name, phoneNumber, relationship } });
+        S.editId = null; await loadContacts(); toast('Contact updated.');
+      } catch (e) { toast(friendly(e, 'Could not update the contact.')); }
+    });
+  },
   async pins(f) {
     const pin = $id('sPin').value.trim(), duressPin = $id('sDuress').value.trim(), err = $id('sErr');
     if (!/^\d{4,6}$/.test(pin) || !/^\d{4,6}$/.test(duressPin)) { err.textContent = 'Both PINs must be 4 to 6 digits.'; return; }
@@ -557,6 +598,7 @@ setInterval(() => {
   }
   if (S.tab === 'timer' && st === 'running') { const t = $id('tcount'); if (t) t.textContent = mmss(S.timer.expiresAt - Date.now()); }
 }, 250);
+
 // Live location: while an SOS is ACTIVE, send the browser's position every 10 seconds
 setInterval(() => {
   if (!S.token || !navigator.geolocation) return;
@@ -576,6 +618,7 @@ setInterval(() => {
     { enableHighAccuracy: true, timeout: 8000, maximumAge: 5000 }
   );
 }, 10000);
+
 /* ---------- start ---------- */
 (function init() {
   const p = payloadOf(S.token || '');
