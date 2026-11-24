@@ -6,23 +6,26 @@ import com.companio.model.TrustedContact;
 import com.companio.service.TrustedContactService;
 import jakarta.validation.Valid;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 import java.util.stream.Collectors;
+
 /**
  * Manages trusted-contact CRUD requests.
  */
-
-
 @RestController
 @RequestMapping("/api/contacts")
 public class TrustedContactController {
 
     @Autowired
     private TrustedContactService trustedContactService;
+
+    @Value("${telegram.bot-username:}")
+    private String botUsername;
 
     @PostMapping
     public ResponseEntity<TrustedContactResponse> addContact(
@@ -35,7 +38,7 @@ public class TrustedContactController {
                 body.phoneNumber(),
                 body.relationship()
         );
-        return ResponseEntity.ok(new TrustedContactResponse(contact));
+        return ResponseEntity.ok(new TrustedContactResponse(contact, botUsername));
     }
 
     @GetMapping
@@ -43,7 +46,7 @@ public class TrustedContactController {
         List<TrustedContactResponse> responses = trustedContactService
                 .getContactsForUser(authentication.getName())
                 .stream()
-                .map(TrustedContactResponse::new)
+                .map(c -> new TrustedContactResponse(c, botUsername))
                 .collect(Collectors.toList());
         return ResponseEntity.ok(responses);
     }
@@ -61,7 +64,7 @@ public class TrustedContactController {
                 body.phoneNumber(),
                 body.relationship()
         );
-        return ResponseEntity.ok(new TrustedContactResponse(contact));
+        return ResponseEntity.ok(new TrustedContactResponse(contact, botUsername));
     }
 
     @DeleteMapping("/{id}")

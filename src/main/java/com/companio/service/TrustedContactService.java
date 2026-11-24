@@ -37,11 +37,18 @@ public class TrustedContactService {
         return trustedContactRepository.save(contact);
     }
 
-    public List<TrustedContact> getContactsForUser(String userEmail) {
+        public List<TrustedContact> getContactsForUser(String userEmail) {
         User user = userRepository.findByEmail(userEmail)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        return trustedContactRepository.findByUser_Id(user.getId());
+        List<TrustedContact> list = trustedContactRepository.findByUser_Id(user.getId());
+        for (TrustedContact c : list) {
+            if (c.getConnectCode() == null) {
+                c.setConnectCode(TrustedContact.newCode());
+                trustedContactRepository.save(c);
+            }
+        }
+        return list;
     }
 
     public TrustedContact updateContact(String userEmail, Long contactId, String name, String phoneNumber, String relationship) {

@@ -11,13 +11,16 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 
 /**
- * Logs SOS and timer alerts for the prototype notification system.
+ * Logs SOS alerts and sends each one to the contact's own Telegram chat when connected.
  */
 @Service
 public class LoggingNotificationService implements NotificationService {
 
     @Autowired
     private TrustedContactRepository trustedContactRepository;
+
+    @Autowired
+    private TelegramClient telegram;
 
     @Value("${companio.public-base-url:http://localhost:8080}")
     private String baseUrl;
@@ -26,15 +29,11 @@ public class LoggingNotificationService implements NotificationService {
     public void notifyContacts(SosEvent event) {
 
         List<TrustedContact> contacts =
-                trustedContactRepository.findByUser_Id(
-                        event.getUser().getId()
-                );
+                trustedContactRepository.findByUser_Id(event.getUser().getId());
 
         if (contacts.isEmpty()) {
-            System.out.println(
-                    "SOS " + event.getId()
-                            + ": user has no trusted contacts to alert."
-            );
+            System.out.println("SOS " + event.getId()
+                    + ": user has no trusted contacts to alert.");
             return;
         }
 
@@ -44,24 +43,24 @@ public class LoggingNotificationService implements NotificationService {
                         + event.getLatitude() + "," + event.getLongitude()
                         : "location unavailable";
 
-        // Generate the live tracking link if a tracking token exists.
         String tracking = event.getTrackingToken() != null
                 ? baseUrl + "/track.html?t=" + event.getTrackingToken()
                 : "no tracking link";
 
-        for (TrustedContact contact : contacts) {
+        String message = event.getUser().getName() + " needs help (SOS)."
+                + "\nLive tracking: " + tracking
+                + "\nStarting position: " + location;
 
-            System.out.println(
-                    "[ALERT] SOS " + event.getId()
-                            + ": would notify "
-                            + contact.getName()
-                            + " (" + contact.getPhoneNumber() + ") - "
-                            + event.getUser().getName()
-                            + " needs help. "
-                            + location
-                            + " | live tracking: "
-                            + tracking
-            );
+        for (TrustedContact contact : contacts) {
+            boolean viaTelegram = contact.getTelegramChatId() != null && telegram.enabled();
+            System.out.println("[ALERT] SOS " + event.getId()
+                    + ": " + contact.getName()
+                    + " (" + contact.getPhoneNumber() + ") via "
+                    + (viaTelegram ? "Telegram" : "log only (Telegram not connected)")
+                    + " | live tracking: " + tracking);
+            if (viaTelegram) {
+                telegram.send(contact.getTelegramChatId(), message);
+            }
         }
     }
 }
