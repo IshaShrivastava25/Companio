@@ -1,212 +1,140 @@
 # Companio
 
-A women's safety backend that lets a user alert the people they trust, with an SOS that can be cancelled safely, a guardian timer that raises the alarm if you don't check in, and a prototype scream detector for a future hands-free trigger.
+Companio is a personal-safety prototype. A user presses SOS, gets 15 seconds to cancel with a PIN, and if they do not cancel, their trusted contacts are alerted on Telegram with a live tracking link that shows where the user is.
 
-Final-year project, BCA (AI & Data Science). Built by [@IshaShrivastava25](https://github.com/IshaShrivastava25).
+> **Status: working prototype, not a certified safety product.** Do not rely on it in a real emergency. See [Limitations](#limitations).
 
-> **Status: working prototype, not a safety product.** Alerts to contacts are simulated, there is no mobile app yet, and the ML model is not connected to the backend. Do not rely on it in a real emergency.
+## What it does
 
-## What works today
+- **SOS with a cancel window.** Pressing SOS starts a 15-second countdown. The user can cancel with their PIN. Otherwise the SOS becomes ACTIVE and contacts are alerted.
+- **Duress PIN.** A second PIN that looks like a normal cancel on screen, but the server keeps the alert running. It is for when someone forces the user to cancel.
+- **Live tracking link.** Each SOS has a random link (`/track.html?t=...`). Contacts open it without an account and see the user's first name and latest position, refreshed every 5 seconds. The link stops working as soon as the SOS ends.
+- **Live location.** While an SOS is ACTIVE, the web page sends the browser's position to the server every 10 seconds.
+- **Guardian timer.** The user sets how long a journey should take. If they do not check in before it ends, an SOS starts automatically, without the cancel window.
+- **Trusted contacts.** Up to 5 per user, with add, edit and delete.
+- **Telegram alerts.** Each contact connects once through a personal link, then receives alerts in their own Telegram.
 
-| Area | Status |
-|---|---|
-| Accounts, BCrypt password hashing, JWT login | Built and tested |
-| Trusted contacts (add, edit, delete, up to 5) | Built and tested |
-| SOS with a 15-second cancel window | Built and tested |
-| PIN cancel and **duress PIN** | Built and tested |
-| Guardian timer with a background scheduler | Built and tested |
-| Input validation and clean 400/401/404/409 errors | Built and tested |
-| Per-user data isolation (checked with two accounts) | Built and tested |
-| Web prototype of the app screens (`static/index.html`) | Built |
-| Scream detection model (YAMNet embeddings + logistic regression) | Trained and evaluated in Colab, **not integrated** |
-| Alerts to contacts | **Simulated:** the server prints who it would notify |
-| React Native app, shake trigger, fake call, offline SMS, 112 dial | Planned |
-| Real push/SMS delivery, audio upload | Planned |
-
-## How it works
-
-Solid boxes exist today; dashed boxes are planned.
+## Architecture
 
 ```mermaid
 flowchart LR
-    Web["Web prototype<br/>static/index.html"] -->|REST + JWT| API["Spring Boot API"]
-    API --> DB[("PostgreSQL")]
-    API --> Notify["Notification service<br/>logs [ALERT] lines"]
-    App["React Native app"] -.->|REST + JWT| API
-    Notify -.-> Push["Push / SMS delivery"]
-    API -.-> ML["ML service<br/>FastAPI + YAMNet model"]
-    App -.-> Audio["Audio upload"]
-
-    classDef planned stroke-dasharray: 5 5,stroke:#888,color:#555;
-    class App,Push,ML,Audio planned;
+    U[User's browser<br/>index.html] -->|REST + JWT| API[Spring Boot API]
+    C[Contact's phone<br/>track.html] -->|public token link| API
+    API --> DB[(PostgreSQL)]
+    API -->|sendMessage| TG[Telegram Bot API]
+    TG --> CP[Contact's Telegram]
+    SCH[Schedulers<br/>SOS promotion, timers,<br/>Telegram polling] --> API
 ```
 
-### The SOS lifecycle
+**Stack:** Java 21, Spring Boot, Spring Security with JWT, Spring Data JPA, PostgreSQL, BCrypt, plain HTML and JavaScript for the web client.
+
+## SOS lifecycle
 
 ```mermaid
 stateDiagram-v2
-    [*] --> PENDING: manual SOS (15 second window)
-    [*] --> ACTIVE: guardian timer expired
-    PENDING --> CANCELLED: real PIN
-    PENDING --> PENDING: duress PIN (looks cancelled, alert continues)
-    PENDING --> ACTIVE: window elapsed
-    ACTIVE --> RESOLVED: user is safe
+    [*] --> PENDING: SOS pressed
+    PENDING --> CANCELLED: real PIN within 15 s
+    PENDING --> PENDING: duress PIN (screen shows cancelled)
+    PENDING --> ACTIVE: 15 s pass, contacts alerted
+    ACTIVE --> RESOLVED: "I'm safe"
+    [*] --> ACTIVE: guardian timer expires
 ```
 
-- A **manual SOS** starts as `PENDING`. If nobody cancels it within 15 seconds, a scheduler (every 5 seconds) promotes it to `ACTIVE` and the notification service alerts the user's trusted contacts.
-- A **guardian timer** SOS skips the window and goes straight to `ACTIVE`, because the user already missed their check-in.
-- The **duress PIN** is for someone forced to cancel. The response looks like a normal cancel, but the server keeps the SOS running.
-- Only a `PENDING` SOS can be cancelled, and only an `ACTIVE` one can be resolved. Anything else returns 409.
+## Run it locally
 
-### Guardian timer
+**Requirements:** Java 21, PostgreSQL, and (optional) a Telegram bot.
 
-The user sets a duration and checks in when they arrive. A scheduler runs every 60 seconds. For each expired timer it fires the SOS first and marks the timer expired afterwards, so a failed SOS is retried on the next run. If a timer expired more than 5 minutes ago (for example, the server was down), it is closed without sending a stale alert.
+1. Create an empty PostgreSQL database.
+2. Copy `src/main/resources/application.properties.example` to `src/main/resources/application.properties` and fill in your own values. This file is ignored by Git, so your secrets stay on your machine.
 
-## Security notes
+   | Setting | Purpose |
+   |---|---|
+   | `spring.datasource.url`, `.username`, `.password` | Your PostgreSQL connection |
+   | `jwt.secret` | A random string of at least 32 characters |
+   | `telegram.bot-token` | From @BotFather (optional) |
+   | `telegram.bot-username` | Your bot's username, without `@` (optional) |
+   | `companio.public-base-url` | Address that goes into alert links, `http://localhost:8080` by default |
 
-- Passwords are stored as BCrypt hashes. API responses use DTOs, so a hash can never be returned.
-- Login issues a signed JWT (HS256, 24 hours). The server reads the user from the token, never from the request body.
-- A user asking for someone else's event or contact gets **404**, the same as one that does not exist, so IDs cannot be probed.
-- Registration accepts a dedicated request object, so extra fields (such as a PIN hash) cannot be injected.
-- CSRF protection is disabled because the API is stateless and uses an `Authorization` header, not cookies.
-- Secrets stay out of Git: `application.properties` is ignored, and `application.properties.example` is the template.
+3. Start the server:
 
-## API
+   ```
+   ./mvnw spring-boot:run
+   ```
 
-All routes except registration and login need the header `Authorization: Bearer <token>`.
+   On Windows use `.\mvnw.cmd spring-boot:run`.
+4. Open `http://localhost:8080`, create an account, set your PINs in **Settings**, and add a contact.
 
-| Method | Path | Purpose |
+### Telegram alerts
+
+1. In Telegram, message `@BotFather`, send `/newbot`, and copy the token into `telegram.bot-token`.
+2. Put the bot's username in `telegram.bot-username` and restart the server.
+3. In the app, open **Contacts**. Each contact has a **Connect Telegram** link. The contact opens it on their own phone and taps **Start**. Within a few seconds the contact shows "Telegram connected".
+4. Contacts who have not connected only appear in the server log.
+
+### Testing on a phone
+
+Phones cannot reach `localhost`, and browsers only share location over HTTPS. For testing, a temporary tunnel works:
+
+```
+cloudflared tunnel --url http://localhost:8080
+```
+
+Put the address it prints into `companio.public-base-url`, restart the server, and open the app through that address. The address changes every time the tunnel starts, and while it runs your login page is public, so use a strong password and close the tunnel when you finish.
+
+## API summary
+
+| Method and path | Auth | Purpose |
 |---|---|---|
-| POST | `/api/users` | Register: `name`, `email`, `password` (8 to 72 characters), `phoneNumber` (7 to 15 digits, optional) |
-| POST | `/api/auth/login` | Log in with `email` and `password`, returns `{"token": "..."}` |
-| GET | `/api/users/me` | The signed-in user's details |
-| PUT | `/api/users/me/pins` | Set `pin` and `duressPin` (4 to 6 digits each, different from each other) |
-| GET, POST | `/api/contacts` | List or add a trusted contact (maximum 5) |
-| PUT, DELETE | `/api/contacts/{id}` | Edit or delete a contact |
-| POST | `/api/sos/trigger` | Start an SOS: `latitude`, `longitude` |
-| GET | `/api/sos` | The user's SOS history |
-| PUT | `/api/sos/{id}/cancel` | Cancel a pending SOS: `{"pin": "..."}` |
-| PUT | `/api/sos/{id}/resolve` | Mark an active SOS as resolved |
-| POST | `/api/guardian-timer/start` | Start a timer: `durationMinutes` |
-| PUT | `/api/guardian-timer/check-in` | Check in and close the active timer |
+| `POST /api/users` | No | Register |
+| `POST /api/auth/login` | No | Log in, returns a JWT |
+| `GET /api/users/me` | Yes | Own profile only |
+| `PUT /api/users/me/pins` | Yes | Set PIN and duress PIN |
+| `GET/POST /api/contacts`, `PUT/DELETE /api/contacts/{id}` | Yes | Trusted contacts |
+| `POST /api/sos/trigger` | Yes | Start an SOS |
+| `GET /api/sos` | Yes | Own SOS history |
+| `PUT /api/sos/{id}/cancel` | Yes | Cancel with PIN or duress PIN |
+| `PUT /api/sos/{id}/resolve` | Yes | Mark safe |
+| `POST /api/sos/{id}/location` | Yes | Send a position update |
+| `POST /api/guardian-timer/start`, `PUT /api/guardian-timer/check-in` | Yes | Guardian timer |
+| `GET /api/track/{token}` | No | Public tracking data, only while ACTIVE |
 
-Errors use standard status codes (400 validation or wrong PIN, 401 no or expired token, 404 not found, 409 wrong state) with a short message.
+## Security
 
-## Tech stack
+- Passwords and PINs are hashed with BCrypt. JWTs expire after 24 hours.
+- Every SOS, contact and timer is scoped to its owner. Another user gets a 404.
+- Tracking links are random 122-bit tokens, shown only while the SOS is ACTIVE, and expose only the first name and position.
+- Request bodies are validated and errors use one JSON format.
+- Rate limits per IP address, per minute: 10 logins, 5 registrations, 5 SOS triggers.
+- Secrets live in `application.properties`, which is not in Git.
 
-Java 21, Spring Boot 4.1, Spring Security, Spring Data JPA (Hibernate), PostgreSQL, JJWT, Bean Validation, Maven wrapper. The ML prototype uses Python, TensorFlow Hub (YAMNet), scikit-learn and Google Colab.
-
-## Getting started
-
-**You need:** JDK 21 or newer, and PostgreSQL. Maven is not required, the wrapper is included.
-
-```powershell
-git clone https://github.com/IshaShrivastava25/Companio.git
-cd Companio
-```
-
-1. **Create the database** (pgAdmin, or `psql -U postgres`): `CREATE DATABASE companio_db;`
-2. **Create your config.** Copy `src/main/resources/application.properties.example` to `src/main/resources/application.properties` and fill it in:
-   ```properties
-   spring.datasource.url=jdbc:postgresql://localhost:5432/companio_db
-   spring.datasource.username=postgres
-   spring.datasource.password=YOUR_PASSWORD
-   spring.jpa.hibernate.ddl-auto=update
-   jwt.secret=CHANGE_ME_to_a_random_string_of_at_least_32_characters
-   server.error.include-stacktrace=never
-   server.error.include-message=never
-   ```
-3. **Run it:**
-   ```powershell
-   .\mvnw.cmd spring-boot:run        # Windows PowerShell / cmd
-   ./mvnw spring-boot:run            # macOS or Linux
-   ```
-
-   If PowerShell blocks the Maven wrapper script, use a one-off policy change for this session:
-   ```powershell
-   Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-   .\mvnw.cmd spring-boot:run
-   ```
-4. **Open** <http://localhost:8080> for the web prototype, or call the API directly:
-   ```powershell
-   Invoke-RestMethod -Method POST -Uri http://localhost:8080/api/users -ContentType application/json `
-     -Body '{"name":"Demo","email":"demo@example.com","password":"demo12345","phoneNumber":"9876543210"}'
-   $r = Invoke-RestMethod -Method POST -Uri http://localhost:8080/api/auth/login -ContentType application/json `
-     -Body '{"email":"demo@example.com","password":"demo12345"}'
-   Invoke-RestMethod -Uri http://localhost:8080/api/users/me -Headers @{Authorization="Bearer $($r.token)"}
-   ```
-
-### The web prototype
-
-`src/main/resources/static/index.html` is a single file with no dependencies, served by Spring Boot. It stands in for the planned mobile screens. A "behind the screen" panel lists the real API calls as you click, and presenter notes show what the server is doing, for example that a duress-PIN cancel still leaves the alert running.
-
-## Project structure
+## Tests
 
 ```
-src/main/java/com/companio/
-  config/       security filter chain, JWT filter and utility
-  controller/   REST endpoints
-  dto/          request and response objects
-  exception/    global exception handler
-  model/        entities and status enums
-  repository/   Spring Data JPA repositories
-  service/      business logic, schedulers, notification service
-src/main/resources/
-  application.properties.example
-  static/index.html
-ml/
-  notebooks/    Colab notebooks for feature extraction and evaluation
-  models/       trained classifier and its metadata
+./mvnw test -Dtest=CriticalLogicTests
 ```
 
-## ML prototype: scream detection
+Six automated tests cover the real PIN cancelling an SOS, the duress PIN keeping it alive, a wrong PIN being rejected, one user being unable to cancel another's SOS or edit another's contact, and the tracking link refusing a PENDING SOS. The rate limiter was checked by hand: the eleventh login attempt in a minute returns 429.
 
-**Goal:** estimate the probability that an audio clip contains a scream, so a future version could start or suggest an SOS without a button press.
+## Limitations
 
-**Data:** the [Human Screaming Detection Dataset](https://www.kaggle.com/datasets/whats2000/human-screaming-detection-dataset) on Kaggle (MIT licence): 3,493 clips, 862 screaming and 2,631 not. Stratified 70 / 15 / 15 split (2,445 / 524 / 524), fixed seed.
-
-**Method:** transfer learning. Each clip is passed through [YAMNet](https://tfhub.dev/google/yamnet/1), a pretrained audio model, and its frame embeddings are averaged into one 1024-number vector. A logistic regression (standardised features, balanced class weights) is trained on those vectors. The decision threshold was chosen on the validation set, and the test set was evaluated afterwards.
-
-**Test results** at threshold 0.20, 524 clips (129 screams), with 95% confidence intervals:
-
-| Measure | Result |
-|---|---|
-| Screams caught (recall) | 121 of 129, 93.8% (88.2% to 96.8%) |
-| Alerts that were real (precision) | 121 of 173, 69.9% (62.7% to 76.3%) |
-| Harmless clips flagged | 52 of 395, 13.2% (10.2% to 16.9%) |
-| ROC-AUC | 0.969 |
-
-**Reading these honestly**
-- 70% precision is too noisy to start an SOS on its own. The design uses three bands: a high score starts the SOS, a middle score asks the user to confirm, a low score is ignored.
-- About a quarter of the clips are screams. Real screams are far rarer, so real-world precision would be much lower.
-- The clips look like YouTube or AudioSet-style audio, and YAMNet was trained on AudioSet. If the dataset overlaps with it, these scores may be optimistic.
-- The data is public recordings, not real emergencies. Phone microphones, distance and noise will lower accuracy. It detects screams only.
-- There is no comparison against a no-training baseline yet.
-- The model is not served by the backend. It is saved in `ml/models/` for a future FastAPI service.
-
-Notebooks are in `ml/notebooks/`. `Companio_Train_Evaluate.ipynb` reads saved embeddings, compares four classifiers on validation data, and reports operating points with confidence intervals.
-
-## Known limitations
-
-- No rate limiting on login or PIN attempts. A four-digit PIN can be brute-forced by an attacker who holds a valid token.
-- Alerts are printed in the server log. There is no SMS or push delivery, and no retry tracking.
-- A guardian-timer SOS has no location.
-- The schema is managed by `ddl-auto=update`. Adding a new enum value needed a manual change to a database constraint. Flyway migrations are the fix.
-- If a scheduler promotion and a cancel arrive at the same moment, the last write wins. Optimistic locking would fix this.
-- No automated tests yet.
-- Login tokens last 24 hours and there are no refresh tokens.
+- **Web prototype only.** There is no mobile app, so there is no background location, no locked-screen use and no shake trigger. Live location stops if the browser tab is closed, and Chrome slows hidden tabs, so the page must stay visible.
+- **Alerts reach Telegram users only.** A contact must connect Telegram once. There is no WhatsApp or SMS delivery yet.
+- **No permanent hosting.** The tracking link needs a tunnel, and its address changes each run. Free hosting tiers sleep when idle, which would stop the guardian timer and SOS promotion jobs, so a real launch needs an always-on plan.
+- **Rate limiting is in memory.** Counts reset on restart and do not work across several servers.
+- **Test coverage is partial.** The guardian timer and notification code have no automated tests.
+- **Location accuracy.** Laptop browsers report approximate positions, so coordinates may barely move.
 
 ## Roadmap
 
-1. React Native app: shake-to-alert, fake incoming call, offline SMS fallback, one-tap 112 dial
-2. Real delivery with Firebase push and SMS, with retries and delivery tracking
-3. Audio chunk upload, and the ML model behind a FastAPI service called by the backend
-4. Rate limiting, automated tests, Flyway migrations
-5. Redis caching, WebSockets for live location, Docker, AWS deployment, CI/CD
-6. Later: partnerships for police and NGO integration
+1. Host the backend on an always-on server with HTTPS and a managed PostgreSQL.
+2. Android app: foreground location service, shake trigger, and an offline SMS fallback sent from the phone's own SIM.
+3. WhatsApp and server-side SMS so contacts do not need Telegram. In India, SMS needs DLT registration and WhatsApp needs approved message templates.
+4. On-device scream detection with a TensorFlow Lite model. A high score would start the same cancelable SOS rather than alert contacts directly.
 
-## Credits and related work
+## ML prototype
 
-- YAMNet and AudioSet, Google
-- Human Screaming Detection Dataset, Ren-Di Wu, Kaggle (MIT licence)
-- Scream detection with machine learning on AudioSet data, JMIR Formative Research, 2020 (PMC7327591)
+The `ml/` folder contains a scream-detection prototype: YAMNet audio embeddings with a logistic-regression classifier, trained and evaluated on a public screaming dataset. It is a separate experiment and is **not connected to the backend**. At the permissive threshold, precision was only about 70%, so a model like this should only start a cancelable SOS, never alert contacts on its own. Real-world accuracy is unknown because the data was public recordings, not real emergencies. See `ml/` for the notebooks and results.
+
+## License
+
+No license has been chosen yet, so by default all rights are reserved. Add a license file before inviting reuse.
